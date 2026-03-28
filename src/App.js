@@ -76,8 +76,8 @@ export default function App() {
   const [screen, setScreen] = useState("landing");
   const [dark,   setDark]   = useState(false);
 
-  const joePlayer = usePlayer(JOE_QUESTS);
-  const lizPlayer = usePlayer(LIZ_QUESTS);
+  const joePlayer = usePlayer(JOE_QUESTS, "Joe");
+  const lizPlayer = usePlayer(LIZ_QUESTS, "Liz");
   const feed      = useFeed();
 
   // Apply theme attribute to <html>

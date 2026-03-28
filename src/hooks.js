@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { JOE_QUESTS, LIZ_QUESTS, SECTIONS } from "./data";
+import { supabase } from "./supabase";
 
 // ── Unique ID helper ──────────────────────────────────────────────────────────
 export const newId = () =>
@@ -34,7 +35,7 @@ const hydratePresets = (presetMap) => {
 
 // ── usePlayer hook ────────────────────────────────────────────────────────────
 // Manages one player's quests, done state, and template editing.
-export function usePlayer(presetMap) {
+export function usePlayer(presetMap, playerName = "unknown") {
   const todayIdx = new Date().getDay();
 
   // Quests keyed by section: { morning:[], work:[], learning:[], personal:[], closing:[] }
@@ -77,8 +78,22 @@ export function usePlayer(presetMap) {
   }, []);
 
   const toggleDone = useCallback((id) => {
-    setDone((p) => ({ ...p, [id]: !p[id] }));
-  }, []);
+    setDone((prev) => {
+      const nowDone = !prev[id];
+      if (nowDone) {
+        const quest = Object.values(quests).flat().find((q) => q.id === id);
+        if (quest) {
+          supabase.from("quest_logs").insert({
+            player:     playerName,
+            quest_id:   id,
+            xp_earned:  quest.xp || 0,
+            date:       new Date().toISOString().slice(0, 10),
+          });
+        }
+      }
+      return { ...prev, [id]: nowDone };
+    });
+  }, [quests, playerName]);
 
   // ── Load a specific day's presets ───────────────────────────────────────────
   const loadDay = useCallback((dayIdx) => {
