@@ -5,4 +5,10 @@ const supabaseKey  = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Supabase env vars missing — running without persistence');
+}
+
+export const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;

@@ -83,7 +83,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
       if (nowDone) {
         const quest = Object.values(quests).flat().find((q) => q.id === id);
         if (quest) {
-          supabase.from("quest_logs").insert({
+          supabase?.from("quest_logs").insert({
             player:     playerName,
             quest_id:   id,
             xp_earned:  quest.xp || 0,
