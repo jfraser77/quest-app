@@ -77,7 +77,7 @@ const PIPE_COLS = ["Today", "Active", "Done", "Boss", "Streak"];
 
 export default function Landing({
   joeXP, lizXP, joeDone, lizDone, joeTotal, lizTotal,
-  onJoe, onLiz, onShared, onITLog,
+  currentPlayer, onJoe, onLiz, onShared, onITLog,
 }) {
   const totalXP    = joeXP + lizXP;
   const totalDone  = joeDone + lizDone;
@@ -163,20 +163,24 @@ export default function Landing({
 
           {/* QUICK NAV CARDS */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 20 }}>
-            <button className="enter-card" onClick={onJoe}>
-              <WarriorAvatar size={44} />
-              <div>
-                <div className="enter-card-title" style={{ color: "#6a50d0" }}>Joe's Board</div>
-                <div className="enter-card-sub">{joeDone}/{joeTotal} quests · {joeXP} XP</div>
-              </div>
-            </button>
-            <button className="enter-card" onClick={onLiz}>
-              <MageAvatar size={44} />
-              <div>
-                <div className="enter-card-title" style={{ color: "#c040a0" }}>Liz's Board</div>
-                <div className="enter-card-sub">{lizDone}/{lizTotal} quests · {lizXP} XP</div>
-              </div>
-            </button>
+            {onJoe && (
+              <button className="enter-card" onClick={onJoe}>
+                <WarriorAvatar size={44} />
+                <div>
+                  <div className="enter-card-title" style={{ color: "#6a50d0" }}>Joe's Board</div>
+                  <div className="enter-card-sub">{joeDone}/{joeTotal} quests · {joeXP} XP</div>
+                </div>
+              </button>
+            )}
+            {onLiz && (
+              <button className="enter-card" onClick={onLiz}>
+                <MageAvatar size={44} />
+                <div>
+                  <div className="enter-card-title" style={{ color: "#c040a0" }}>Liz's Board</div>
+                  <div className="enter-card-sub">{lizDone}/{lizTotal} quests · {lizXP} XP</div>
+                </div>
+              </button>
+            )}
             <button className="enter-card" onClick={onShared}>
               <span style={{ fontSize: 36 }}>🔮</span>
               <div>
@@ -184,13 +188,15 @@ export default function Landing({
                 <div className="enter-card-sub">Feed · Stats · Leaderboard</div>
               </div>
             </button>
-            <button className="enter-card" onClick={onITLog}>
-              <span style={{ fontSize: 36 }}>🖥</span>
-              <div>
-                <div className="enter-card-title">IT Daily Log</div>
-                <div className="enter-card-sub">Tickets · Notes · Handoff</div>
-              </div>
-            </button>
+            {onITLog && (
+              <button className="enter-card" onClick={onITLog}>
+                <span style={{ fontSize: 36 }}>🖥</span>
+                <div>
+                  <div className="enter-card-title">IT Daily Log</div>
+                  <div className="enter-card-sub">Tickets · Notes · Handoff</div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
