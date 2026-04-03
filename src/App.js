@@ -9,6 +9,7 @@ import PlayerBoard from "./components/PlayerBoard";
 import SharedRealm from "./components/SharedRealm";
 import ITLog        from "./components/ITLog";
 import Login        from "./components/Login";
+import Legend       from "./components/Legend";
 
 // ─── Theme context ─────────────────────────────────────────────────────────────
 export const ThemeCtx = createContext({ dark: false, toggle: () => {} });
@@ -33,11 +34,12 @@ const NAV_ALL = [
   { id: "liz",     icon: "✨", label: "Liz"     },
   { id: "shared",  icon: "🔮", label: "Realm"   },
   { id: "itlog",   icon: "🖥",  label: "IT Log"  },
+  { id: "legend",  icon: "📜", label: "Legend"  },
 ];
 
 const NAV_FOR = {
-  joe: ["landing", "joe", "shared", "itlog"],
-  liz: ["landing", "liz", "shared"],
+  joe: ["landing", "joe", "shared", "itlog", "legend"],
+  liz: ["landing", "liz", "shared", "legend"],
 };
 
 // ─── Shared layout wrapper ─────────────────────────────────────────────────────
@@ -132,6 +134,7 @@ export default function App() {
     liz:     ["Liz's Board",   "Mage · Daily Quests"],
     shared:  ["Shared Realm",  "Feed · Stats · Leaderboard"],
     itlog:   ["IT Daily Log",  "Tickets · Notes · Handoff"],
+    legend:  ["XP Legend",     "Quest guide & scoring reference"],
   };
 
   const [topTitle, topSub] = TITLES[screen] || TITLES.landing;
@@ -214,6 +217,8 @@ export default function App() {
         {screen === "itlog" && currentPlayer === "joe" && (
           <ITLog onBack={() => setScreen("landing")} />
         )}
+
+        {screen === "legend" && <Legend />}
       </Shell>
     </ThemeCtx.Provider>
   );
