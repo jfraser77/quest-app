@@ -1,16 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SECTIONS, DAYS_SHORT } from "../data";
 import { QuestCard, QuestEditor } from "./QuestCard";
 
 
 const todayIdx = new Date().getDay();
+const todayDate = new Date().toISOString().slice(0, 10);
 
 export default function PlayerBoard({ player, color, avatar: Avatar, playerHook, onBack, onShared, onITLog }) {
   const [mode,       setMode]       = useState("play");
   const [questTab,   setQuestTab]   = useState("today");
   const [flash,      setFlash]      = useState(null);
-  const [intention,  setIntention]  = useState("");
-  const [dailyNote,  setDailyNote]  = useState("");
+
+  const intentionKey = `intention_${player}_${todayDate}`;
+  const noteKey      = `note_${player}_${todayDate}`;
+
+  const [intention,  setIntention]  = useState(() => {
+    try { return localStorage.getItem(intentionKey) || ""; } catch { return ""; }
+  });
+  const [dailyNote,  setDailyNote]  = useState(() => {
+    try { return localStorage.getItem(noteKey) || ""; } catch { return ""; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(intentionKey, intention); } catch {}
+  }, [intention, intentionKey]);
+
+  useEffect(() => {
+    try { localStorage.setItem(noteKey, dailyNote); } catch {}
+  }, [dailyNote, noteKey]);
   const [selDay,     setSelDay]     = useState(todayIdx);
 
   const {
