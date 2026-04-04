@@ -1,6 +1,6 @@
 
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {  SECTIONS } from "./data";
 import { supabase } from "./supabase";
 
@@ -35,63 +35,116 @@ export const blankQuest = (sectionId = "morning") => ({
 //   return out;
 // };
 
-// ── usePlayer hook ────────────────────────────────────────────────────────────
-// Manages one player's quests, done state, and template editing.
-export function usePlayer(presetMap, playerName = "unknown") {
-  const todayIdx = new Date().getDay();
-  const todayDate = new Date().toISOString().slice(0, 10);
-  const questsKey = `quests_${playerName}_${todayDate}`;
+// ── Build default quests from preset ─────────────────────────────────────────
+function buildFromPreset(presetMap, dayIdx) {
+  const out = {};
+  SECTIONS.forEach(({ id }) => { out[id] = []; });
+  (presetMap[dayIdx] || []).forEach((q) => {
+    const sec = q.section || "personal";
+    out[sec].push({ ...q, id: newId(), custom: false });
+  });
+  return out;
+}
 
-  // Quests keyed by section: { morning:[], work:[], learning:[], personal:[], closing:[] }
+// ── usePlayer hook ────────────────────────────────────────────────────────────
+// Manages one player's quests, done state, intention, and closing note.
+export function usePlayer(presetMap, playerName = "unknown") {
+  const todayIdx  = new Date().getDay();
+  const todayDate = new Date().toISOString().slice(0, 10);
+
+  // localStorage keys (fast offline cache)
+  const questsKey    = `quests_${playerName}_${todayDate}`;
+  const intentionKey = `intention_${playerName}_${todayDate}`;
+  const noteKey      = `note_${playerName}_${todayDate}`;
+  const doneKey      = `done_${playerName}_${todayDate}`;
+
+  // ── State — seed from localStorage so the UI is instant on load ─────────────
   const [quests, setQuests] = useState(() => {
-    // Restore today's edited quests from localStorage if available
     try {
       const saved = JSON.parse(localStorage.getItem(questsKey));
       if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
     } catch {}
-    // Fall back to today's preset
-    const out = {};
-    SECTIONS.forEach(({ id }) => { out[id] = []; });
-    const dayQ = presetMap[todayIdx] || [];
-    dayQ.forEach((q) => {
-      const sec = q.section || "personal";
-      out[sec].push({ ...q, id: newId(), custom: false });
-    });
-    return out;
+    return buildFromPreset(presetMap, todayIdx);
+  });
+
+  const [intention, setIntention] = useState(() => {
+    try { return localStorage.getItem(intentionKey) || ""; } catch { return ""; }
+  });
+
+  const [note, setNote] = useState(() => {
+    try { return localStorage.getItem(noteKey) || ""; } catch { return ""; }
   });
 
   const [done, setDone] = useState({});
 
-  // ── localStorage persistence ────────────────────────────────────────────────
-  const todayKey = `done_${playerName}_${todayDate}`;
-
-  // Persist quests whenever they change
+  // ── Supabase load on mount (authoritative cross-device source) ──────────────
   useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from("daily_board")
+      .select("quests, intention, note")
+      .eq("player", playerName)
+      .eq("date", todayDate)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.quests && typeof data.quests === "object" && !Array.isArray(data.quests)) {
+          setQuests(data.quests);
+          try { localStorage.setItem(questsKey, JSON.stringify(data.quests)); } catch {}
+        }
+        if (data.intention != null) {
+          setIntention(data.intention);
+          try { localStorage.setItem(intentionKey, data.intention); } catch {}
+        }
+        if (data.note != null) {
+          setNote(data.note);
+          try { localStorage.setItem(noteKey, data.note); } catch {}
+        }
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Combined persist: localStorage immediately, Supabase debounced ──────────
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    // localStorage — instant
     try {
       localStorage.setItem(questsKey, JSON.stringify(quests));
+      localStorage.setItem(intentionKey, intention);
+      localStorage.setItem(noteKey, note);
     } catch {}
-  }, [quests, questsKey]);
 
-  // Restore done state on mount by matching saved titles to current quest IDs
+    // Supabase — debounced 1.5 s so we don't write on every keystroke
+    if (!supabase) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      supabase.from("daily_board").upsert(
+        { player: playerName, date: todayDate, quests, intention, note },
+        { onConflict: "player,date" }
+      );
+    }, 1500);
+  }, [quests, intention, note]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Restore done state (title-matched so it survives ID regeneration) ───────
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(todayKey) || "[]");
+      const saved = JSON.parse(localStorage.getItem(doneKey) || "[]");
       if (!Array.isArray(saved) || saved.length === 0) return;
       const allQ = Object.values(quests).flat();
       const restored = {};
       allQ.forEach((q) => { if (saved.includes(q.title)) restored[q.id] = true; });
       if (Object.keys(restored).length > 0) setDone(restored);
     } catch {}
-  }, [todayKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [doneKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist done state whenever it changes
   useEffect(() => {
     try {
       const allQ = Object.values(quests).flat();
       const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-      localStorage.setItem(todayKey, JSON.stringify(doneTitles));
+      localStorage.setItem(doneKey, JSON.stringify(doneTitles));
     } catch {}
-  }, [done, quests, todayKey]);
+  }, [done, quests, doneKey]);
 
   // ── Quest CRUD ─────────────────────────────────────────────────────────────
   const addQuest = useCallback((sectionId) => {
@@ -138,34 +191,27 @@ export function usePlayer(presetMap, playerName = "unknown") {
 
   // ── Load a specific day's presets ───────────────────────────────────────────
   const loadDay = useCallback((dayIdx) => {
-    const out = {};
-    SECTIONS.forEach(({ id }) => { out[id] = []; });
-    const dayQ = presetMap[dayIdx] || [];
-    dayQ.forEach((q) => {
-      const sec = q.section || "personal";
-      out[sec].push({ ...q, id: newId(), custom: false });
-    });
-    setQuests(out);
+    setQuests(buildFromPreset(presetMap, dayIdx));
     setDone({});
   }, [presetMap]);
 
   const resetDay = useCallback(() => {
-    const key = `done_${playerName}_${new Date().toISOString().slice(0, 10)}`;
-    try { localStorage.removeItem(key); } catch {}
+    try { localStorage.removeItem(doneKey); } catch {}
     setDone({});
-  }, [playerName]);
+  }, [doneKey]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
-  const allQuests     = Object.values(quests).flat();
-  const filledQuests  = allQuests.filter((q) => q.title.trim());
-  const totalXP       = filledQuests.reduce((s, q) => s + (q.xp || 0), 0);
-  const earnedXP      = filledQuests.filter((q) => done[q.id]).reduce((s, q) => s + (q.xp || 0), 0);
-  const totalCount    = filledQuests.length;
-  const doneCount     = filledQuests.filter((q) => done[q.id]).length;
-  const pct           = totalXP > 0 ? Math.round((earnedXP / totalXP) * 100) : 0;
+  const allQuests    = Object.values(quests).flat();
+  const filledQuests = allQuests.filter((q) => q.title.trim());
+  const totalXP      = filledQuests.reduce((s, q) => s + (q.xp || 0), 0);
+  const earnedXP     = filledQuests.filter((q) => done[q.id]).reduce((s, q) => s + (q.xp || 0), 0);
+  const totalCount   = filledQuests.length;
+  const doneCount    = filledQuests.filter((q) => done[q.id]).length;
+  const pct          = totalXP > 0 ? Math.round((earnedXP / totalXP) * 100) : 0;
 
   return {
-    quests, done,
+    quests, done, intention, note,
+    setIntention, setNote,
     addQuest, updateQuest, removeQuest, toggleDone,
     loadDay, resetDay,
     totalXP, earnedXP, totalCount, doneCount, pct,

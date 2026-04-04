@@ -1,37 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { SECTIONS, DAYS_SHORT } from "../data";
 import { QuestCard, QuestEditor } from "./QuestCard";
 
 
 const todayIdx = new Date().getDay();
-const todayDate = new Date().toISOString().slice(0, 10);
 
 export default function PlayerBoard({ player, color, avatar: Avatar, playerHook, onBack, onShared, onITLog }) {
-  const [mode,       setMode]       = useState("play");
-  const [questTab,   setQuestTab]   = useState("today");
-  const [flash,      setFlash]      = useState(null);
-
-  const intentionKey = `intention_${player}_${todayDate}`;
-  const noteKey      = `note_${player}_${todayDate}`;
-
-  const [intention,  setIntention]  = useState(() => {
-    try { return localStorage.getItem(intentionKey) || ""; } catch { return ""; }
-  });
-  const [dailyNote,  setDailyNote]  = useState(() => {
-    try { return localStorage.getItem(noteKey) || ""; } catch { return ""; }
-  });
-
-  useEffect(() => {
-    try { localStorage.setItem(intentionKey, intention); } catch {}
-  }, [intention, intentionKey]);
-
-  useEffect(() => {
-    try { localStorage.setItem(noteKey, dailyNote); } catch {}
-  }, [dailyNote, noteKey]);
+  const [mode,     setMode]   = useState("play");
+  const [questTab, setQuestTab] = useState("today");
+  const [flash,    setFlash]  = useState(null);
   const [selDay,     setSelDay]     = useState(todayIdx);
 
   const {
-    quests, done, addQuest, updateQuest, removeQuest,
+    quests, done, intention, note, setIntention, setNote,
+    addQuest, updateQuest, removeQuest,
     toggleDone, loadDay, resetDay,
     totalXP, earnedXP, totalCount, doneCount, pct,
   } = playerHook;
@@ -134,7 +116,7 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
 
               <div className="panel" style={{ marginTop:16 }}>
                 <div className="section-label" style={{ marginBottom:8 }}>CLOSING NOTE</div>
-                <textarea value={dailyNote} onChange={e=>setDailyNote(e.target.value)}
+                <textarea value={note} onChange={e=>setNote(e.target.value)}
                   placeholder="A reminder or reason to finish strong..." rows={2} style={{ resize:"none" }}/>
               </div>
 
@@ -178,10 +160,10 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
                 ))
               )}
 
-              {dailyNote && (
+              {note && (
                 <div className="panel" style={{ marginTop:14, borderLeft:`3px solid ${color}` }}>
                   <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.7, fontStyle:"italic" }}>
-                    "{dailyNote}"
+                    "{note}"
                   </div>
                 </div>
               )}
