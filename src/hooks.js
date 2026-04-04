@@ -78,7 +78,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
     } catch {}
   }, [done, quests, todayKey]);
 
-  // ── Quest CRUD ──────────────────────────────────────────────────────────────
+  // ── Quest CRUD ─────────────────────────────────────────────────────────────
   const addQuest = useCallback((sectionId) => {
     setQuests((p) => ({
       ...p,
