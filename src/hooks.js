@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { JOE_QUESTS, LIZ_QUESTS, SECTIONS } from "./data";
 import { supabase } from "./supabase";
 
@@ -51,6 +51,30 @@ export function usePlayer(presetMap, playerName = "unknown") {
   });
 
   const [done, setDone] = useState({});
+
+  // ── localStorage persistence ────────────────────────────────────────────────
+  const todayKey = `done_${playerName}_${new Date().toISOString().slice(0, 10)}`;
+
+  // Restore done state on mount by matching saved titles to current quest IDs
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(todayKey) || "[]");
+      if (!Array.isArray(saved) || saved.length === 0) return;
+      const allQ = Object.values(quests).flat();
+      const restored = {};
+      allQ.forEach((q) => { if (saved.includes(q.title)) restored[q.id] = true; });
+      if (Object.keys(restored).length > 0) setDone(restored);
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist done state whenever it changes
+  useEffect(() => {
+    try {
+      const allQ = Object.values(quests).flat();
+      const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
+      localStorage.setItem(todayKey, JSON.stringify(doneTitles));
+    } catch {}
+  }, [done, quests, todayKey]);
 
   // ── Quest CRUD ──────────────────────────────────────────────────────────────
   const addQuest = useCallback((sectionId) => {
@@ -109,8 +133,10 @@ export function usePlayer(presetMap, playerName = "unknown") {
   }, [presetMap]);
 
   const resetDay = useCallback(() => {
+    const key = `done_${playerName}_${new Date().toISOString().slice(0, 10)}`;
+    try { localStorage.removeItem(key); } catch {}
     setDone({});
-  }, []);
+  }, [playerName]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const allQuests     = Object.values(quests).flat();
