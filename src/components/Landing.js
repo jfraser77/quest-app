@@ -1,7 +1,7 @@
 import React from "react";
 import { WarriorAvatar, MageAvatar } from "../avatars";
 import { DAYS_SHORT } from "../data";
-import { T } from "../styles";
+
 
 const todayIdx = new Date().getDay();
 
@@ -48,21 +48,21 @@ function InsightRow({ icon, name, pct, color }) {
 }
 
 // ── Player card in right panel ─────────────────────────────────────────────────
-function PlayerRow({ name, role, done, total, xp, color, Avatar, badge, onClick }) {
-  return (
-    <div className="rp-item" style={{ cursor: "pointer" }} onClick={onClick}>
-      <Avatar size={34} />
-      <div className="rp-label">
-        <div className="rp-name">{name}</div>
-        <span className={`badge-tag ${badge}`}>{role}</span>
-      </div>
-      <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color }}>{xp} XP</div>
-        <div style={{ fontSize: 10, color: "var(--text2)" }}>{done}/{total}</div>
-      </div>
-    </div>
-  );
-}
+// function PlayerRow({ name, role, done, total, xp, color, Avatar, badge, onClick }) {
+//   return (
+//     <div className="rp-item" style={{ cursor: "pointer" }} onClick={onClick}>
+//       <Avatar size={34} />
+//       <div className="rp-label">
+//         <div className="rp-name">{name}</div>
+//         <span className={`badge-tag ${badge}`}>{role}</span>
+//       </div>
+//       <div style={{ textAlign: "right" }}>
+//         <div style={{ fontSize: 13, fontWeight: 700, color }}>{xp} XP</div>
+//         <div style={{ fontSize: 10, color: "var(--text2)" }}>{done}/{total}</div>
+//       </div>
+//     </div>
+//   );
+// }
 
 // ── Quest pipeline rows ────────────────────────────────────────────────────────
 const PIPELINE = [

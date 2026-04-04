@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { SECTIONS, DAYS_SHORT } from "../data";
 import { QuestCard, QuestEditor } from "./QuestCard";
-import { T } from "../styles";
+
 
 const todayIdx = new Date().getDay();
 

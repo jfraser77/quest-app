@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect, useCallback } from "react";
-import { JOE_QUESTS, LIZ_QUESTS, SECTIONS } from "./data";
+import {  SECTIONS } from "./data";
 import { supabase } from "./supabase";
 
 // ── Unique ID helper ──────────────────────────────────────────────────────────
@@ -22,18 +22,18 @@ export const blankQuest = (sectionId = "morning") => ({
 });
 
 // ── Hydrate preset data into quest objects ────────────────────────────────────
-const hydratePresets = (presetMap) => {
-  const out = {};
-  SECTIONS.forEach(({ id }) => { out[id] = []; });
-  Object.entries(presetMap).forEach(([dayIdx, quests]) => {
-    quests.forEach((q) => {
-      const sec = q.section || "personal";
-      if (!out[sec]) out[sec] = [];
-      out[sec].push({ ...q, id: newId(), custom: false, day: Number(dayIdx) });
-    });
-  });
-  return out;
-};
+// const hydratePresets = (presetMap) => {
+//   const out = {};
+//   SECTIONS.forEach(({ id }) => { out[id] = []; });
+//   Object.entries(presetMap).forEach(([dayIdx, quests]) => {
+//     quests.forEach((q) => {
+//       const sec = q.section || "personal";
+//       if (!out[sec]) out[sec] = [];
+//       out[sec].push({ ...q, id: newId(), custom: false, day: Number(dayIdx) });
+//     });
+//   });
+//   return out;
+// };
 
 // ── usePlayer hook ────────────────────────────────────────────────────────────
 // Manages one player's quests, done state, and template editing.
