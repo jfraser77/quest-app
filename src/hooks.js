@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect, useCallback } from "react";
 import { JOE_QUESTS, LIZ_QUESTS, SECTIONS } from "./data";
 import { supabase } from "./supabase";
@@ -65,7 +67,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
       allQ.forEach((q) => { if (saved.includes(q.title)) restored[q.id] = true; });
       if (Object.keys(restored).length > 0) setDone(restored);
     } catch {}
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [todayKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist done state whenever it changes
   useEffect(() => {
