@@ -39,9 +39,17 @@ export const blankQuest = (sectionId = "morning") => ({
 // Manages one player's quests, done state, and template editing.
 export function usePlayer(presetMap, playerName = "unknown") {
   const todayIdx = new Date().getDay();
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const questsKey = `quests_${playerName}_${todayDate}`;
 
   // Quests keyed by section: { morning:[], work:[], learning:[], personal:[], closing:[] }
   const [quests, setQuests] = useState(() => {
+    // Restore today's edited quests from localStorage if available
+    try {
+      const saved = JSON.parse(localStorage.getItem(questsKey));
+      if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
+    } catch {}
+    // Fall back to today's preset
     const out = {};
     SECTIONS.forEach(({ id }) => { out[id] = []; });
     const dayQ = presetMap[todayIdx] || [];
@@ -55,7 +63,14 @@ export function usePlayer(presetMap, playerName = "unknown") {
   const [done, setDone] = useState({});
 
   // ── localStorage persistence ────────────────────────────────────────────────
-  const todayKey = `done_${playerName}_${new Date().toISOString().slice(0, 10)}`;
+  const todayKey = `done_${playerName}_${todayDate}`;
+
+  // Persist quests whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(questsKey, JSON.stringify(quests));
+    } catch {}
+  }, [quests, questsKey]);
 
   // Restore done state on mount by matching saved titles to current quest IDs
   useEffect(() => {
