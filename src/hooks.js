@@ -82,7 +82,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
     if (!supabase) return;
     supabase
       .from("daily_board")
-      .select("quests, intention, note")
+      .select("quests, intention, note, done_titles")
       .eq("player", playerName)
       .eq("date", todayDate)
       .single()
@@ -100,6 +100,15 @@ export function usePlayer(presetMap, playerName = "unknown") {
           setNote(data.note);
           try { localStorage.setItem(noteKey, data.note); } catch {}
         }
+        if (data.done_titles && Array.isArray(data.done_titles)) {
+        const allQ = Object.values(quests).flat();
+        const restored = {};
+        allQ.forEach((q) => { 
+          if (data.done_titles.includes(q.title)) restored[q.id] = true; 
+        });
+        if (Object.keys(restored).length > 0) setDone(restored);
+        try { localStorage.setItem(doneKey, JSON.stringify(data.done_titles)); } catch {}
+      }
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -114,16 +123,21 @@ export function usePlayer(presetMap, playerName = "unknown") {
       localStorage.setItem(noteKey, note);
     } catch {}
 
+      // Get current done titles for persistence
+  const allQ = Object.values(quests).flat();
+  const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
+
+
     // Supabase — debounced 1.5 s so we don't write on every keystroke
     if (!supabase) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       supabase.from("daily_board").upsert(
-        { player: playerName, date: todayDate, quests, intention, note },
+        { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
         { onConflict: "player,date" }
       );
     }, 1500);
-  }, [quests, intention, note]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [quests, intention, note, done]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Restore done state (title-matched so it survives ID regeneration) ───────
   useEffect(() => {
@@ -138,13 +152,13 @@ export function usePlayer(presetMap, playerName = "unknown") {
   }, [doneKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist done state whenever it changes
-  useEffect(() => {
-    try {
-      const allQ = Object.values(quests).flat();
-      const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-      localStorage.setItem(doneKey, JSON.stringify(doneTitles));
-    } catch {}
-  }, [done, quests, doneKey]);
+  // useEffect(() => {
+  //   try {
+  //     const allQ = Object.values(quests).flat();
+  //     const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
+  //     localStorage.setItem(doneKey, JSON.stringify(doneTitles));
+  //   } catch {}
+  // }, [done, quests, doneKey]);
 
   // ── Quest CRUD ─────────────────────────────────────────────────────────────
   const addQuest = useCallback((sectionId) => {
