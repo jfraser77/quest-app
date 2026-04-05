@@ -101,7 +101,7 @@ function Shell({ screen, setScreen: handleSetScreen, dark, toggleTheme, topTitle
   );
 }
 
-// ─── ROOT ──────────────────────────────────────────────────────────────────────
+// ───  ROOT ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const { session, loading, signIn, signOut } = useAuth();
   const [dark, setDark] = useState(false);
@@ -176,7 +176,7 @@ export default function App() {
       <style>{GLOBAL_CSS}</style>
 
       <Shell
-        screen={screen} handleSetScreen={handleSetScreen}
+        screen={screen} setScreen={handleSetScreen}
         dark={dark} toggleTheme={toggleTheme}
         topTitle={topTitle} topSub={topSub}
         navIds={navIds}
