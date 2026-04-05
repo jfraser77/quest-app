@@ -207,8 +207,10 @@ export default function App() {
 
         {screen === "shared" && (
           <SharedRealm
-            joeXP={joePlayer.earnedXP}    lizXP={lizPlayer.earnedXP}
-            joeDone={joePlayer.doneCount} lizDone={lizPlayer.doneCount}
+            currentPlayer={currentPlayer}
+            joeXP={joePlayer.earnedXP}      lizXP={lizPlayer.earnedXP}
+            joeDone={joePlayer.doneCount}   lizDone={lizPlayer.doneCount}
+            joeTotal={joePlayer.totalCount} lizTotal={lizPlayer.totalCount}
             feedHook={feed}
             onBack={() => setScreen("landing")}
           />

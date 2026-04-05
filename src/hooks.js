@@ -239,15 +239,38 @@ export function usePlayer(presetMap, playerName = "unknown") {
 // ── useFeed hook ──────────────────────────────────────────────────────────────
 export function useFeed() {
   const [posts, setPosts] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(true);
 
-  const addPost = useCallback((player, prompt, answer) => {
+  useEffect(() => {
+    if (!supabase) { setFeedLoading(false); return; }
+    supabase
+      .from("feed_posts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (error) console.error("[QuestApp] feed load error:", error);
+        if (data) setPosts(data);
+        setFeedLoading(false);
+      });
+  }, []);
+
+  const addPost = useCallback(async (player, prompt, answer) => {
     if (!answer.trim() || !prompt) return false;
-    setPosts((p) => [
-      { id: newId(), player, prompt, answer, ts: Date.now() },
-      ...p,
-    ]);
+    const newPost = {
+      id: newId(),
+      player,
+      prompt,
+      answer,
+      created_at: new Date().toISOString(),
+    };
+    setPosts((p) => [newPost, ...p]);
+    if (supabase) {
+      const { error } = await supabase.from("feed_posts").insert(newPost);
+      if (error) console.error("[QuestApp] feed post error:", error);
+    }
     return true;
   }, []);
 
-  return { posts, addPost };
+  return { posts, feedLoading, addPost };
 }
