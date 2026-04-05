@@ -77,8 +77,9 @@ export function usePlayer(presetMap, playerName = "unknown") {
 
   const [done, setDone] = useState({});
   const supabaseLoaded = useRef(false);
+  const saveTimer = useRef(null);
 
-  // ── Supabase load on mount (authoritative cross-device source) ──────────────
+  // ── Supabase load on mount ──────────────────────────────────────────────────
   useEffect(() => {
     if (!supabase) return;
     supabase
@@ -86,16 +87,15 @@ export function usePlayer(presetMap, playerName = "unknown") {
       .select("quests, intention, note, done_titles")
       .eq("player", playerName)
       .eq("date", todayDate)
-      .single()
-      .then(({ data }) => {
-        supabaseLoaded.current = true; // always unblock saves, even with no existing row
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) console.error("[QuestApp] load error:", error);
+        supabaseLoaded.current = true;
         if (!data) return;
-        // Use data.quests directly for done_titles matching (not stale closure)
-        let loadedQuests = null;
-        if (data.quests && typeof data.quests === "object" && !Array.isArray(data.quests)) {
-          loadedQuests = data.quests;
-          setQuests(data.quests);
-          try { localStorage.setItem(questsKey, JSON.stringify(data.quests)); } catch {}
+        const srcQuests = (data.quests && !Array.isArray(data.quests)) ? data.quests : null;
+        if (srcQuests) {
+          setQuests(srcQuests);
+          try { localStorage.setItem(questsKey, JSON.stringify(srcQuests)); } catch {}
         }
         if (data.intention != null) {
           setIntention(data.intention);
@@ -105,55 +105,55 @@ export function usePlayer(presetMap, playerName = "unknown") {
           setNote(data.note);
           try { localStorage.setItem(noteKey, data.note); } catch {}
         }
-        if (data.done_titles && Array.isArray(data.done_titles) && data.done_titles.length > 0) {
-          const questSource = loadedQuests || quests;
-          const allQ = Object.values(questSource).flat();
+        if (Array.isArray(data.done_titles) && data.done_titles.length > 0) {
+          const allQ = Object.values(srcQuests || quests).flat();
           const restored = {};
-          allQ.forEach((q) => {
-            if (data.done_titles.includes(q.title)) restored[q.id] = true;
-          });
+          allQ.forEach((q) => { if (data.done_titles.includes(q.title)) restored[q.id] = true; });
           setDone(restored);
           try { localStorage.setItem(doneKey, JSON.stringify(data.done_titles)); } catch {}
         }
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Persist quests/intention/note: localStorage instant, Supabase debounced ──
-  const saveTimer = useRef(null);
+  // ── Save done immediately to localStorage + Supabase (full row) ────────────
+  useEffect(() => {
+    if (!supabaseLoaded.current) return;
+    const allQ = Object.values(quests).flat();
+    const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
+    try { localStorage.setItem(doneKey, JSON.stringify(doneTitles)); } catch {}
+    if (!supabase) return;
+    supabase.from("player_day")
+      .upsert(
+        { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
+        { onConflict: "player,date" }
+      )
+      .then(({ error }) => { if (error) console.error("[QuestApp] done save error:", error); });
+  }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Debounce-save quests/intention/note to localStorage + Supabase ──────────
   useEffect(() => {
     try {
       localStorage.setItem(questsKey, JSON.stringify(quests));
       localStorage.setItem(intentionKey, intention);
       localStorage.setItem(noteKey, note);
     } catch {}
-
-    if (!supabase) return;
+    if (!supabase || !supabaseLoaded.current) return;
+    const allQ = Object.values(quests).flat();
+    const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      supabase.from("player_day").upsert(
-        { player: playerName, date: todayDate, quests, intention, note },
-        { onConflict: "player,date" }
-      );
+      supabase.from("player_day")
+        .upsert(
+          { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
+          { onConflict: "player,date" }
+        )
+        .then(({ error }) => { if (error) console.error("[QuestApp] text save error:", error); });
     }, 1500);
   }, [quests, intention, note]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Persist done: immediate to localStorage + Supabase (no debounce) ─────────
+  // ── Restore done from localStorage before Supabase loads ───────────────────
   useEffect(() => {
-    if (!supabaseLoaded.current) return; // wait for authoritative state before saving
-    const allQ = Object.values(quests).flat();
-    const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-    try { localStorage.setItem(doneKey, JSON.stringify(doneTitles)); } catch {}
-    if (!supabase) return;
-    supabase.from("player_day").upsert(
-      { player: playerName, date: todayDate, done_titles: doneTitles },
-      { onConflict: "player,date" }
-    );
-  }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Restore done state from localStorage (skipped if Supabase already loaded) ─
-  useEffect(() => {
-    if (supabaseLoaded.current) return; // Supabase is authoritative; don't overwrite
+    if (supabaseLoaded.current) return;
     try {
       const saved = JSON.parse(localStorage.getItem(doneKey) || "[]");
       if (!Array.isArray(saved) || saved.length === 0) return;
@@ -163,15 +163,6 @@ export function usePlayer(presetMap, playerName = "unknown") {
       if (Object.keys(restored).length > 0) setDone(restored);
     } catch {}
   }, [doneKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Persist done state whenever it changes
-  // useEffect(() => {
-  //   try {
-  //     const allQ = Object.values(quests).flat();
-  //     const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-  //     localStorage.setItem(doneKey, JSON.stringify(doneTitles));
-  //   } catch {}
-  // }, [done, quests, doneKey]);
 
   // ── Quest CRUD ─────────────────────────────────────────────────────────────
   const addQuest = useCallback((sectionId) => {
