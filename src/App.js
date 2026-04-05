@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { GLOBAL_CSS } from "./styles";
 import { usePlayer, useFeed } from "./hooks";
 import { useAuth } from "./useAuth";
@@ -43,7 +43,7 @@ const NAV_FOR = {
 };
 
 // ─── Shared layout wrapper ─────────────────────────────────────────────────────
-function Shell({ screen, setScreen, dark, toggleTheme, topTitle, topSub, navIds, onSignOut, children }) {
+function Shell({ screen, setScreen: handleSetScreen, dark, toggleTheme, topTitle, topSub, navIds, onSignOut, children }) {
   const todayName = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const nav = NAV_ALL.filter(n => navIds.includes(n.id));
 
@@ -57,7 +57,7 @@ function Shell({ screen, setScreen, dark, toggleTheme, topTitle, topSub, navIds,
             <button
               key={n.id}
               className={`nav-item${screen === n.id ? " active" : ""}`}
-              onClick={() => setScreen(n.id)}
+              onClick={() => handleSetScreen(n.id)}
               title={n.label}
             >
               {n.icon}
@@ -108,15 +108,26 @@ export default function App() {
 
   const currentPlayer = resolvePlayer(session);
 
-  const [screen, setScreen] = useState(() =>
-    currentPlayer === "liz" ? "liz" : currentPlayer === "joe" ? "joe" : "landing"
-  );
+  const [screen, setScreen] = useState("landing");
+  const prevPlayer = useRef(null);
 
-  // When auth state settles, jump to the player's own board
+  // Persist screen across reloads; only redirect to board on fresh login
   useEffect(() => {
-    if (currentPlayer === "joe") setScreen("joe");
-    else if (currentPlayer === "liz") setScreen("liz");
+    if (!currentPlayer) { prevPlayer.current = null; return; }
+    const validScreens = currentPlayer === "joe"
+      ? ["landing", "joe", "shared", "itlog", "legend"]
+      : ["landing", "liz", "shared", "legend"];
+    if (prevPlayer.current === null) {
+      const saved = localStorage.getItem("quest_screen");
+      setScreen(saved && validScreens.includes(saved) ? saved : currentPlayer);
+    }
+    prevPlayer.current = currentPlayer;
   }, [currentPlayer]);
+
+  const handleSetScreen = (s) => {
+    setScreen(s);
+    localStorage.setItem("quest_screen", s);
+  };
 
   const joePlayer = usePlayer(JOE_QUESTS, "Joe");
   const lizPlayer = usePlayer(LIZ_QUESTS, "Liz");
@@ -165,7 +176,7 @@ export default function App() {
       <style>{GLOBAL_CSS}</style>
 
       <Shell
-        screen={screen} setScreen={setScreen}
+        screen={screen} handleSetScreen={handleSetScreen}
         dark={dark} toggleTheme={toggleTheme}
         topTitle={topTitle} topSub={topSub}
         navIds={navIds}
@@ -177,10 +188,10 @@ export default function App() {
             joeDone={joePlayer.doneCount}   lizDone={lizPlayer.doneCount}
             joeTotal={joePlayer.totalCount} lizTotal={lizPlayer.totalCount}
             currentPlayer={currentPlayer}
-            onJoe={currentPlayer === "joe" ? () => setScreen("joe") : null}
-            onLiz={currentPlayer === "liz" ? () => setScreen("liz") : null}
-            onShared={() => setScreen("shared")}
-            onITLog={currentPlayer === "joe" ? () => setScreen("itlog") : null}
+            onJoe={currentPlayer === "joe" ? () => handleSetScreen("joe") : null}
+            onLiz={currentPlayer === "liz" ? () => handleSetScreen("liz") : null}
+            onShared={() => handleSetScreen("shared")}
+            onITLog={currentPlayer === "joe" ? () => handleSetScreen("itlog") : null}
           />
         )}
 
@@ -189,9 +200,9 @@ export default function App() {
             player="Joe" color="#6a50d0"
             avatar={WarriorAvatar}
             playerHook={joePlayer}
-            onBack={() => setScreen("landing")}
-            onShared={() => setScreen("shared")}
-            onITLog={() => setScreen("itlog")}
+            onBack={() => handleSetScreen("landing")}
+            onShared={() => handleSetScreen("shared")}
+            onITLog={() => handleSetScreen("itlog")}
           />
         )}
 
@@ -200,8 +211,8 @@ export default function App() {
             player="Liz" color="#c040a0"
             avatar={MageAvatar}
             playerHook={lizPlayer}
-            onBack={() => setScreen("landing")}
-            onShared={() => setScreen("shared")}
+            onBack={() => handleSetScreen("landing")}
+            onShared={() => handleSetScreen("shared")}
           />
         )}
 
@@ -212,12 +223,12 @@ export default function App() {
             joeDone={joePlayer.doneCount}   lizDone={lizPlayer.doneCount}
             joeTotal={joePlayer.totalCount} lizTotal={lizPlayer.totalCount}
             feedHook={feed}
-            onBack={() => setScreen("landing")}
+            onBack={() => handleSetScreen("landing")}
           />
         )}
 
         {screen === "itlog" && currentPlayer === "joe" && (
-          <ITLog onBack={() => setScreen("landing")} />
+          <ITLog onBack={() => handleSetScreen("landing")} />
         )}
 
         {screen === "legend" && <Legend />}
