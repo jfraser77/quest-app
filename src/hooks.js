@@ -76,19 +76,24 @@ export function usePlayer(presetMap, playerName = "unknown") {
   });
 
   const [done, setDone] = useState({});
+  const supabaseLoaded = useRef(false);
 
   // ── Supabase load on mount (authoritative cross-device source) ──────────────
   useEffect(() => {
     if (!supabase) return;
     supabase
-      .from("daily_board")
+      .from("player_day")
       .select("quests, intention, note, done_titles")
       .eq("player", playerName)
       .eq("date", todayDate)
       .single()
       .then(({ data }) => {
         if (!data) return;
+        supabaseLoaded.current = true;
+        // Use data.quests directly for done_titles matching (not stale closure)
+        let loadedQuests = null;
         if (data.quests && typeof data.quests === "object" && !Array.isArray(data.quests)) {
+          loadedQuests = data.quests;
           setQuests(data.quests);
           try { localStorage.setItem(questsKey, JSON.stringify(data.quests)); } catch {}
         }
@@ -100,15 +105,16 @@ export function usePlayer(presetMap, playerName = "unknown") {
           setNote(data.note);
           try { localStorage.setItem(noteKey, data.note); } catch {}
         }
-        if (data.done_titles && Array.isArray(data.done_titles)) {
-        const allQ = Object.values(quests).flat();
-        const restored = {};
-        allQ.forEach((q) => { 
-          if (data.done_titles.includes(q.title)) restored[q.id] = true; 
-        });
-        if (Object.keys(restored).length > 0) setDone(restored);
-        try { localStorage.setItem(doneKey, JSON.stringify(data.done_titles)); } catch {}
-      }
+        if (data.done_titles && Array.isArray(data.done_titles) && data.done_titles.length > 0) {
+          const questSource = loadedQuests || quests;
+          const allQ = Object.values(questSource).flat();
+          const restored = {};
+          allQ.forEach((q) => {
+            if (data.done_titles.includes(q.title)) restored[q.id] = true;
+          });
+          setDone(restored);
+          try { localStorage.setItem(doneKey, JSON.stringify(data.done_titles)); } catch {}
+        }
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -132,15 +138,16 @@ export function usePlayer(presetMap, playerName = "unknown") {
     if (!supabase) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      supabase.from("daily_board").upsert(
+      supabase.from("player_day").upsert(
         { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
         { onConflict: "player,date" }
       );
     }, 1500);
   }, [quests, intention, note, done]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Restore done state (title-matched so it survives ID regeneration) ───────
+  // ── Restore done state from localStorage (skipped if Supabase already loaded) ─
   useEffect(() => {
+    if (supabaseLoaded.current) return; // Supabase is authoritative; don't overwrite
     try {
       const saved = JSON.parse(localStorage.getItem(doneKey) || "[]");
       if (!Array.isArray(saved) || saved.length === 0) return;
