@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "../supabase";
 // Design tokens come from CSS vars injected via GLOBAL_CSS
 
 // ─── SEED DATA from Notion paste ─────────────────────────────────────────────
@@ -380,12 +381,53 @@ function DayBlock({ day, onUpdate, onDelete, isToday }) {
 
 // ─── MAIN IT LOG SCREEN ───────────────────────────────────────────────────────
 
+const LS_KEY = "itlog_joe";
+
 export default function ITLog({ onBack }) {
-  const [logs, setLogs] = useState(SEED_LOGS);
-  const [view, setView]  = useState("log");   // log | summary
+  const [logs, setLogs] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY));
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch {}
+    return SEED_LOGS;
+  });
+  const [view, setView]  = useState("log");
   const [search, setSearch] = useState("");
+  const supabaseLoaded = useRef(false);
+  const saveTimer = useRef(null);
 
   const todayStr = today();
+
+  // ── Load from Supabase on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from("it_logs")
+      .select("logs")
+      .eq("player", "Joe")
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) console.error("[QuestApp] it_logs load error:", error);
+        supabaseLoaded.current = true;
+        if (data?.logs && Array.isArray(data.logs) && data.logs.length > 0) {
+          setLogs(data.logs);
+          try { localStorage.setItem(LS_KEY, JSON.stringify(data.logs)); } catch {}
+        }
+      });
+  }, []);
+
+  // ── Save to localStorage immediately, Supabase debounced ───────────────────
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(logs)); } catch {}
+    if (!supabase || !supabaseLoaded.current) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      supabase
+        .from("it_logs")
+        .upsert({ player: "Joe", logs }, { onConflict: "player" })
+        .then(({ error }) => { if (error) console.error("[QuestApp] it_logs save error:", error); });
+    }, 1500);
+  }, [logs]);
 
   const updateDay  = (updated) => setLogs((p) => p.map((d) => (d.id === updated.id ? updated : d)));
   const deleteDay  = (id) => setLogs((p) => p.filter((d) => d.id !== id));
