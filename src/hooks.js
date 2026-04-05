@@ -88,8 +88,8 @@ export function usePlayer(presetMap, playerName = "unknown") {
       .eq("date", todayDate)
       .single()
       .then(({ data }) => {
+        supabaseLoaded.current = true; // always unblock saves, even with no existing row
         if (!data) return;
-        supabaseLoaded.current = true;
         // Use data.quests directly for done_titles matching (not stale closure)
         let loadedQuests = null;
         if (data.quests && typeof data.quests === "object" && !Array.isArray(data.quests)) {
