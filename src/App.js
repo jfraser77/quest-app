@@ -118,7 +118,7 @@ export default function App() {
       ? ["landing", "joe", "shared", "itlog", "legend"]
       : ["landing", "liz", "shared", "legend"];
     if (prevPlayer.current === null) {
-      const saved = localStorage.getItem("quest_screen");
+      const saved = sessionStorage.getItem("quest_screen");
       setScreen(saved && validScreens.includes(saved) ? saved : currentPlayer);
     }
     prevPlayer.current = currentPlayer;
@@ -126,7 +126,7 @@ export default function App() {
 
   const handleSetScreen = (s) => {
     setScreen(s);
-    localStorage.setItem("quest_screen", s);
+    sessionStorage.setItem("quest_screen", s);
   };
 
   const joePlayer = usePlayer(JOE_QUESTS, "Joe");
