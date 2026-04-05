@@ -122,26 +122,28 @@ export function usePlayer(presetMap, playerName = "unknown") {
   const saveTimer = useRef(null);
 
   useEffect(() => {
+    const allQ = Object.values(quests).flat();
+    const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
+
     // localStorage — instant
     try {
       localStorage.setItem(questsKey, JSON.stringify(quests));
       localStorage.setItem(intentionKey, intention);
       localStorage.setItem(noteKey, note);
+      // Only write done after Supabase has loaded — prevents wiping real state on mount
+      if (supabaseLoaded.current) {
+        localStorage.setItem(doneKey, JSON.stringify(doneTitles));
+      }
     } catch {}
-
-      // Get current done titles for persistence
-  const allQ = Object.values(quests).flat();
-  const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-
 
     // Supabase — debounced 1.5 s so we don't write on every keystroke
     if (!supabase) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      supabase.from("player_day").upsert(
-        { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
-        { onConflict: "player,date" }
-      );
+      const payload = { player: playerName, date: todayDate, quests, intention, note };
+      // Only include done_titles once we have authoritative state from Supabase
+      if (supabaseLoaded.current) payload.done_titles = doneTitles;
+      supabase.from("player_day").upsert(payload, { onConflict: "player,date" });
     }, 1500);
   }, [quests, intention, note, done]); // eslint-disable-line react-hooks/exhaustive-deps
 
