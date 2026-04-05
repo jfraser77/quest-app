@@ -1,11 +1,13 @@
+import { Quest, QuestType, QuestSection } from "./types";
+
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-export const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-export const DAYS_FULL  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+export const DAYS_SHORT: string[] = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+export const DAYS_FULL: string[]  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-export const QUEST_TYPES = ["work","growth","relationship","body","home","self","ops","learn","personal","close"];
+export const QUEST_TYPES: QuestType[] = ["work","growth","relationship","body","home","self","ops","learn","personal","close"];
 
-export const TYPE_COLOR = {
+export const TYPE_COLOR: Record<QuestType, string> = {
   work:         "#5a7fd4",
   growth:       "#4aaa7a",
   relationship: "#d45a7a",
@@ -18,21 +20,30 @@ export const TYPE_COLOR = {
   close:        "#d4a857",
 };
 
-export const SECTIONS = [
-  { id: "morning",  label: "Morning",       defaultTime: "6:00–9:00 AM"    },
-  { id: "work",     label: "Work Block",    defaultTime: "9:00 AM–5:00 PM" },
-  { id: "learning", label: "Learning",      defaultTime: "Flex"             },
-  { id: "personal", label: "Personal",      defaultTime: "Evening"          },
-  { id: "closing",  label: "Closing Ritual",defaultTime: "Before Bed"       },
+interface Section {
+  id: QuestSection;
+  label: string;
+  defaultTime: string;
+}
+
+export const SECTIONS: Section[] = [
+  { id: "morning",  label: "Morning",        defaultTime: "6:00–9:00 AM"    },
+  { id: "work",     label: "Work Block",     defaultTime: "9:00 AM–5:00 PM" },
+  { id: "learning", label: "Learning",       defaultTime: "Flex"             },
+  { id: "personal", label: "Personal",       defaultTime: "Evening"          },
+  { id: "closing",  label: "Closing Ritual", defaultTime: "Before Bed"       },
 ];
 
-export const LEVEL_NAMES = ["Recruit","Adventurer","Warrior","Champion","Legend"];
-export const getLevel = (xp) =>
+export const LEVEL_NAMES: string[] = ["Recruit","Adventurer","Warrior","Champion","Legend"];
+export const getLevel = (xp: number): number =>
   xp < 200 ? 0 : xp < 500 ? 1 : xp < 1000 ? 2 : xp < 2000 ? 3 : 4;
 
 // ─── QUEST PRESETS ────────────────────────────────────────────────────────────
 
-export const JOE_QUESTS = {
+// Presets omit `id` — it is assigned at runtime in hooks.js
+type QuestPreset = Omit<Quest, "id">;
+
+export const JOE_QUESTS: Record<number, QuestPreset[]> = {
   0: [
     { title:"Weekly reset & plan",        desc:"Fill out tomorrow's board. 3 non-negotiables.",              xp:60,  type:"growth",       section:"morning"  },
     { title:"Cook for Liz",               desc:"Pick a night. Handle logistics. Just tell her when.",         xp:65,  type:"relationship", section:"personal" },
@@ -59,25 +70,25 @@ export const JOE_QUESTS = {
   ],
   4: [
     { title:"New hire & SOP work",        desc:"Knock out one SOP or laptop setup.",                          xp:55,  type:"work",         section:"work"     },
-    { title:"Trading research",           desc:"Watch one Buffett lesson. Extract 3 ideas.",                  xp:60,  type:"learn",        section:"learning",boss:true },
-    { title:"Plan the weekend",           desc:"Pick one thing for you + Liz. Tell her — don't ask.",         xp:50,  type:"relationship", section:"personal",boss:true },
+    { title:"Trading research",           desc:"Watch one Buffett lesson. Extract 3 ideas.",                  xp:60,  type:"learn",        section:"learning", boss:true },
+    { title:"Plan the weekend",           desc:"Pick one thing for you + Liz. Tell her — don't ask.",         xp:50,  type:"relationship", section:"personal", boss:true },
     { title:"Gym",                        desc:"Show up. Even if sore. Showing up IS the win.",               xp:70,  type:"body",         section:"closing"  },
   ],
   5: [
     { title:"Wrap work strong",           desc:"Zero open tickets going into the weekend.",                   xp:60,  type:"work",         section:"work"     },
-    { title:"30-min tunnel: app idea",    desc:"Sketch one profitable app concept. No filtering.",            xp:65,  type:"learn",        section:"learning",boss:true },
-    { title:"Movie night locked in",      desc:"Confirm with Liz. You handle snacks.",                        xp:70,  type:"relationship", section:"personal",boss:true },
+    { title:"30-min tunnel: app idea",    desc:"Sketch one profitable app concept. No filtering.",            xp:65,  type:"learn",        section:"learning", boss:true },
+    { title:"Movie night locked in",      desc:"Confirm with Liz. You handle snacks.",                        xp:70,  type:"relationship", section:"personal", boss:true },
     { title:"I AM list",                  desc:"Read your 10 I AM statements aloud.",                         xp:35,  type:"growth",       section:"closing"  },
   ],
   6: [
     { title:"Gym",                        desc:"Saturday session. Earn the weekend.",                         xp:70,  type:"body",         section:"morning"  },
-    { title:"Something new — all 3",      desc:"One activity with Liz & Spencer neither has done.",           xp:100, type:"relationship", section:"personal",boss:true },
+    { title:"Something new — all 3",      desc:"One activity with Liz & Spencer neither has done.",           xp:100, type:"relationship", section:"personal", boss:true },
     { title:"Code 1 hour",                desc:"No meetings. No excuses. Build.",                             xp:75,  type:"learn",        section:"learning" },
     { title:"Gratitude entry",            desc:"3 things you built or protected this week.",                  xp:40,  type:"growth",       section:"closing"  },
   ],
 };
 
-export const LIZ_QUESTS = {
+export const LIZ_QUESTS: Record<number, QuestPreset[]> = {
   0: [
     { title:"Weekly intention",           desc:"What does a good week with Joe look like?",                   xp:45,  type:"growth",       section:"morning"  },
     { title:"Spencer + me time",          desc:"One unscheduled hour — zero guilt.",                          xp:50,  type:"self",         section:"personal" },
@@ -116,13 +127,13 @@ export const LIZ_QUESTS = {
   ],
   6: [
     { title:"Workout or walk",           desc:"Move your body for you.",                                     xp:55,  type:"self",         section:"morning"  },
-    { title:"Something new — all 3",     desc:"Say yes to whatever Joe planned. Let it be imperfect.",       xp:100, type:"relationship", section:"personal",boss:true },
-    { title:"Monthly relationship check-in", desc:"Two questions each. No scorekeeping.",                   xp:90,  type:"relationship", section:"personal",boss:true },
+    { title:"Something new — all 3",     desc:"Say yes to whatever Joe planned. Let it be imperfect.",       xp:100, type:"relationship", section:"personal", boss:true },
+    { title:"Monthly relationship check-in", desc:"Two questions each. No scorekeeping.",                   xp:90,  type:"relationship", section:"personal", boss:true },
     { title:"Rest without guilt",        desc:"You carried the week. Putting it down is allowed.",           xp:40,  type:"self",         section:"closing"  },
   ],
 };
 
-export const FEED_PROMPTS = [
+export const FEED_PROMPTS: string[] = [
   "What's one thing the other person did recently that you haven't said thank you for?",
   "Describe your perfect lazy Sunday together in 3 words.",
   "What's something you've been nervous to bring up?",
