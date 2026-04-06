@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 
-export default function Login({ signIn }) {
-  const [email,   setEmail]   = useState("");
-  const [sent,    setSent]    = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
+interface LoginProps {
+  signIn: (email: string) => Promise<any>;
+}
 
-  const handleSubmit = async (e) => {
+export default function Login({ signIn }: LoginProps) {
+  const [email,   setEmail]   = useState<string>("");
+  const [sent,    setSent]    = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error,   setError]   = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);

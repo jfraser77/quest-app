@@ -1,14 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl  = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey  = process.env.REACT_APP_SUPABASE_ANON_KEY;
-
-
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('Supabase env vars missing — running without persistence');
 }
 
-export const supabase = supabaseUrl && supabaseKey
+export const supabase: SupabaseClient | null = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;

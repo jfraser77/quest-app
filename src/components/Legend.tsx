@@ -1,7 +1,17 @@
 import React from "react";
 
-// ── Category card ──────────────────────────────────────────────────────────────
-function CatCard({ icon, label, range, quests, headerBg, labelColor, badgeBg, badgeColor }) {
+interface CatCardProps {
+  icon: string;
+  label: string;
+  range: string;
+  quests: [string, number | string][];
+  headerBg: string;
+  labelColor: string;
+  badgeBg: string;
+  badgeColor: string;
+}
+
+function CatCard({ icon, label, range, quests, headerBg, labelColor, badgeBg, badgeColor }: CatCardProps) {
   return (
     <div style={{
       background: "var(--surface)", border: "1px solid var(--border)",
@@ -41,8 +51,7 @@ function CatCard({ icon, label, range, quests, headerBg, labelColor, badgeBg, ba
   );
 }
 
-// ── Data ───────────────────────────────────────────────────────────────────────
-const CATEGORIES = [
+const CATEGORIES: CatCardProps[] = [
   {
     icon: "🌿", label: "Daily Anchors", range: "10–20 XP",
     headerBg: "rgba(20,83,45,0.35)", labelColor: "#86efac",
@@ -123,7 +132,7 @@ const CATEGORIES = [
   },
 ];
 
-const BOSS_QUESTS = [
+const BOSS_QUESTS: [string, number][] = [
   ["Did something you were genuinely afraid to do", 50],
   ["Applied for a job or opportunity", 40],
   ["Interview completed", 50],
@@ -131,7 +140,7 @@ const BOSS_QUESTS = [
   ["Completed a full personal project or goal", 45],
 ];
 
-const SHARED_QUESTS = [
+const SHARED_QUESTS: [string, string][] = [
   ["Date night completed (both present, no phones)", "+25 XP each"],
   ["Both complete a Boss Quest on the same day", "+15 XP each"],
   ["Workout or walk done together", "+20 XP each"],
@@ -140,7 +149,7 @@ const SHARED_QUESTS = [
   ["Shared Realm post left for the other player", "+10 XP each"],
 ];
 
-const RULES = [
+const RULES: string[] = [
   "Add quests to your board the night before using the XP legend above. You can also add quests any time during the day.",
   "XP values are suggested — adjust up or down based on how hard something actually was for you. Honesty over gamification.",
   "Boss Quests (40+ XP) show with a 👑 on the board. Flag one before your day starts so you know what the big thing is.",
@@ -149,7 +158,6 @@ const RULES = [
   "There is no wrong way to use the board. It's yours. Shape it around what actually moves your life forward.",
 ];
 
-// ── Main component ─────────────────────────────────────────────────────────────
 export default function Legend() {
   return (
     <div className="content">
@@ -157,7 +165,6 @@ export default function Legend() {
         .legend-quest-row:hover { background: var(--surface2); }
       `}</style>
 
-      {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ fontSize: 40, marginBottom: 6 }}>👑✨</div>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#c084fc", letterSpacing: "0.04em" }}>
@@ -168,7 +175,6 @@ export default function Legend() {
         </p>
       </div>
 
-      {/* Category grid */}
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
         gap: 16, marginBottom: 16,
@@ -176,7 +182,6 @@ export default function Legend() {
         {CATEGORIES.map(cat => <CatCard key={cat.label} {...cat} />)}
       </div>
 
-      {/* Boss Quests */}
       <div style={{
         background: "rgba(26,10,10,0.6)", border: "1px solid #7f1d1d",
         borderRadius: 14, overflow: "hidden", marginBottom: 16,
@@ -209,7 +214,6 @@ export default function Legend() {
         </div>
       </div>
 
-      {/* Shared Realm */}
       <div style={{
         background: "var(--surface)", border: "1px solid #164e63",
         borderRadius: 14, padding: 16, marginBottom: 16,
@@ -236,7 +240,6 @@ export default function Legend() {
         ))}
       </div>
 
-      {/* Rules */}
       <div style={{
         background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: 14, padding: 16, marginBottom: 8,
@@ -256,7 +259,6 @@ export default function Legend() {
           </div>
         ))}
       </div>
-
     </div>
   );
 }

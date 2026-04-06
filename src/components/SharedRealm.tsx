@@ -1,11 +1,22 @@
 import React, { useState } from "react";
 import { FEED_PROMPTS } from "../data";
 import { WarriorAvatar, MageAvatar } from "../avatars";
+import type { FeedPost } from "../types";
+import type { UseFeedReturn } from "../hooks";
 
 const JOE_COLOR = "#6a50d0";
 const LIZ_COLOR = "#c040a0";
 
-function PlayerBar({ label, Avatar, color, xp, done, total }) {
+interface PlayerBarProps {
+  label:  string;
+  Avatar: React.ComponentType<{ size?: number }>;
+  color:  string;
+  xp:     number;
+  done:   number;
+  total:  number;
+}
+
+function PlayerBar({ label, Avatar, color, xp, done, total }: PlayerBarProps) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
     <div style={{ marginBottom: 16 }}>
@@ -28,11 +39,15 @@ function PlayerBar({ label, Avatar, color, xp, done, total }) {
   );
 }
 
-function FeedCard({ post }) {
-  const isJoe = post.player === "Joe";
-  const color = isJoe ? JOE_COLOR : LIZ_COLOR;
-  const Avatar = isJoe ? WarriorAvatar : MageAvatar;
-  const date = new Date(post.created_at || post.ts);
+interface FeedCardProps {
+  post: FeedPost;
+}
+
+function FeedCard({ post }: FeedCardProps) {
+  const isJoe   = post.player === "Joe";
+  const color   = isJoe ? JOE_COLOR : LIZ_COLOR;
+  const Avatar  = isJoe ? WarriorAvatar : MageAvatar;
+  const date    = new Date(post.created_at);
   const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
@@ -53,22 +68,34 @@ function FeedCard({ post }) {
   );
 }
 
+interface SharedRealmProps {
+  currentPlayer: "joe" | "liz";
+  joeXP:         number;
+  lizXP:         number;
+  joeDone:       number;
+  lizDone:       number;
+  joeTotal:      number;
+  lizTotal:      number;
+  feedHook:      UseFeedReturn;
+  onBack:        () => void;
+}
+
 export default function SharedRealm({
   currentPlayer,
   joeXP, lizXP,
   joeDone, lizDone,
   joeTotal, lizTotal,
   feedHook,
-}) {
+}: SharedRealmProps) {
   const { posts, feedLoading, addPost } = feedHook;
 
-  const myName = currentPlayer === "joe" ? "Joe" : "Liz";
+  const myName  = currentPlayer === "joe" ? "Joe" : "Liz";
   const myColor = currentPlayer === "joe" ? JOE_COLOR : LIZ_COLOR;
 
-  const [activePrompt, setActivePrompt] = useState(null);
-  const [draft, setDraft] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [showAllPrompts, setShowAllPrompts] = useState(false);
+  const [activePrompt,    setActivePrompt]    = useState<string | null>(null);
+  const [draft,           setDraft]           = useState<string>("");
+  const [posting,         setPosting]         = useState<boolean>(false);
+  const [showAllPrompts,  setShowAllPrompts]  = useState<boolean>(false);
 
   const handlePost = async () => {
     if (!draft.trim() || !activePrompt) return;
@@ -85,17 +112,14 @@ export default function SharedRealm({
     setDraft("");
   };
 
-  const totalXP = joeXP + lizXP;
+  const totalXP  = joeXP + lizXP;
   const joeLeads = joeXP >= lizXP;
 
   return (
     <div className="content">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 272px", gap: 20, alignItems: "start" }}>
 
-        {/* ── LEFT: COMPOSER + FEED ── */}
         <div>
-
-          {/* POST COMPOSER */}
           <div className="panel" style={{ marginBottom: 16 }}>
             <div className="panel-header" style={{ marginBottom: 12 }}>
               <div className="panel-title">Shared Realm</div>
@@ -146,7 +170,6 @@ export default function SharedRealm({
               </div>
             )}
 
-            {/* PROMPT BROWSER */}
             {showAllPrompts && !activePrompt && (
               <div className="reveal" style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", letterSpacing: "0.06em", marginBottom: 8 }}>
@@ -170,7 +193,6 @@ export default function SharedRealm({
             )}
           </div>
 
-          {/* FEED */}
           <div className="panel">
             <div className="panel-header" style={{ marginBottom: 12 }}>
               <div className="panel-title">Feed</div>
@@ -195,24 +217,15 @@ export default function SharedRealm({
           </div>
         </div>
 
-        {/* ── RIGHT: STATS + LEADERBOARD ── */}
         <div>
-
-          {/* TODAY'S BATTLE */}
           <div className="panel" style={{ marginBottom: 14 }}>
             <div className="panel-header" style={{ marginBottom: 14 }}>
               <div className="panel-title">Today's Battle</div>
               <span style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600 }}>{totalXP} XP combined</span>
             </div>
 
-            <PlayerBar
-              label="Joe" Avatar={WarriorAvatar} color={JOE_COLOR}
-              xp={joeXP} done={joeDone} total={joeTotal}
-            />
-            <PlayerBar
-              label="Liz" Avatar={MageAvatar} color={LIZ_COLOR}
-              xp={lizXP} done={lizDone} total={lizTotal}
-            />
+            <PlayerBar label="Joe" Avatar={WarriorAvatar} color={JOE_COLOR} xp={joeXP} done={joeDone} total={joeTotal} />
+            <PlayerBar label="Liz" Avatar={MageAvatar}    color={LIZ_COLOR} xp={lizXP} done={lizDone} total={lizTotal} />
 
             {totalXP > 0 && (
               <div style={{
@@ -227,7 +240,6 @@ export default function SharedRealm({
             )}
           </div>
 
-          {/* LEADERBOARD */}
           <div className="panel">
             <div className="panel-header" style={{ marginBottom: 10 }}>
               <div className="panel-title">Leaderboard</div>
@@ -261,7 +273,6 @@ export default function SharedRealm({
               );
             })}
           </div>
-
         </div>
       </div>
     </div>

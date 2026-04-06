@@ -1,6 +1,10 @@
 import React from "react";
 
-export const WarriorAvatar = ({ size = 80 }) => (
+interface AvatarProps {
+  size?: number;
+}
+
+export const WarriorAvatar = ({ size = 80 }: AvatarProps) => (
   <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
     <ellipse cx="40" cy="68" rx="16" ry="10" fill="#2a1a0a"/>
     <rect x="28" y="48" width="24" height="22" rx="4" fill="#8B4513"/>
@@ -27,7 +31,7 @@ export const WarriorAvatar = ({ size = 80 }) => (
   </svg>
 );
 
-export const MageAvatar = ({ size = 80 }) => (
+export const MageAvatar = ({ size = 80 }: AvatarProps) => (
   <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
     <ellipse cx="40" cy="68" rx="16" ry="10" fill="#0d0a1a"/>
     <path d="M24 46 Q30 70 40 72 Q50 70 56 46 Q48 52 40 52 Q32 52 24 46Z" fill="#4a2080"/>

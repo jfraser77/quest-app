@@ -2,17 +2,20 @@ import React from "react";
 import { WarriorAvatar, MageAvatar } from "../avatars";
 import { DAYS_SHORT } from "../data";
 
-
 const todayIdx = new Date().getDay();
 
-// ── Mini bar chart data (mock weekly trend) ────────────────────────────────────
-const BAR_SETS = {
+interface MiniBarChartProps {
+  data:  number[];
+  color: string;
+}
+
+const BAR_SETS: Record<string, number[]> = {
   joe: [40, 65, 30, 80, 55, 90, 70],
   liz: [50, 40, 70, 60, 45, 85, 65],
   xp:  [30, 70, 50, 90, 40, 75, 80],
 };
 
-function MiniBarChart({ data, color }) {
+function MiniBarChart({ data, color }: MiniBarChartProps) {
   const max = Math.max(...data, 1);
   return (
     <div className="mini-bars">
@@ -31,8 +34,14 @@ function MiniBarChart({ data, color }) {
   );
 }
 
-// ── Platform insight row ───────────────────────────────────────────────────────
-function InsightRow({ icon, name, pct, color }) {
+interface InsightRowProps {
+  icon:  string;
+  name:  string;
+  pct:   number;
+  color: string;
+}
+
+function InsightRow({ icon, name, pct, color }: InsightRowProps) {
   return (
     <div className="rp-item">
       <div className="rp-icon">{icon}</div>
@@ -47,25 +56,13 @@ function InsightRow({ icon, name, pct, color }) {
   );
 }
 
-// ── Player card in right panel ─────────────────────────────────────────────────
-// function PlayerRow({ name, role, done, total, xp, color, Avatar, badge, onClick }) {
-//   return (
-//     <div className="rp-item" style={{ cursor: "pointer" }} onClick={onClick}>
-//       <Avatar size={34} />
-//       <div className="rp-label">
-//         <div className="rp-name">{name}</div>
-//         <span className={`badge-tag ${badge}`}>{role}</span>
-//       </div>
-//       <div style={{ textAlign: "right" }}>
-//         <div style={{ fontSize: 13, fontWeight: 700, color }}>{xp} XP</div>
-//         <div style={{ fontSize: 10, color: "var(--text2)" }}>{done}/{total}</div>
-//       </div>
-//     </div>
-//   );
-// }
+interface PipelineRow {
+  label:  string;
+  chips:  (number | null)[];
+  colors: string[];
+}
 
-// ── Quest pipeline rows ────────────────────────────────────────────────────────
-const PIPELINE = [
+const PIPELINE: PipelineRow[] = [
   { label: "Work / IT",      chips: [3, 2, null, null, null], colors: ["pc-a","pc-b"] },
   { label: "Growth",         chips: [4, 3, 2, null, null],    colors: ["pc-b","pc-b","pc-b"] },
   { label: "Relationship",   chips: [2, 2, 1, 1, null],       colors: ["pc-c","pc-c","pc-c","pc-c"] },
@@ -75,26 +72,36 @@ const PIPELINE = [
 
 const PIPE_COLS = ["Today", "Active", "Done", "Boss", "Streak"];
 
+interface LandingProps {
+  joeXP:         number;
+  lizXP:         number;
+  joeDone:       number;
+  lizDone:       number;
+  joeTotal:      number;
+  lizTotal:      number;
+  currentPlayer: "joe" | "liz";
+  onJoe:         (() => void) | null;
+  onLiz:         (() => void) | null;
+  onShared:      () => void;
+  onITLog:       (() => void) | null;
+}
+
 export default function Landing({
   joeXP, lizXP, joeDone, lizDone, joeTotal, lizTotal,
   currentPlayer, onJoe, onLiz, onShared, onITLog,
-}) {
-  const totalXP    = joeXP + lizXP;
-  const totalDone  = joeDone + lizDone;
-  const totalQ     = joeTotal + lizTotal;
-  const joePct     = joeTotal > 0 ? Math.round((joeDone / joeTotal) * 100) : 0;
-  const lizPct     = lizTotal > 0 ? Math.round((lizDone / lizTotal) * 100) : 0;
+}: LandingProps) {
+  const totalXP   = joeXP + lizXP;
+  const totalDone = joeDone + lizDone;
+  const totalQ    = joeTotal + lizTotal;
+  const joePct    = joeTotal > 0 ? Math.round((joeDone / joeTotal) * 100) : 0;
+  const lizPct    = lizTotal > 0 ? Math.round((lizDone / lizTotal) * 100) : 0;
 
   return (
     <div className="content">
       <div className="content-grid">
 
-        {/* ── LEFT / MAIN ── */}
         <div className="content-main">
-
-          {/* STAT CARDS */}
           <div className="stat-cards-row">
-            {/* Joe */}
             <div className="stat-card stat-card-a">
               <div className="stat-label">Joe's Progress</div>
               <div className="stat-value">+{joeXP}</div>
@@ -105,7 +112,6 @@ export default function Landing({
               <MiniBarChart data={BAR_SETS.joe} color="#6a50d0" />
             </div>
 
-            {/* Liz */}
             <div className="stat-card stat-card-b">
               <div className="stat-label">Liz's Progress</div>
               <div className="stat-value">+{lizXP}</div>
@@ -116,7 +122,6 @@ export default function Landing({
               <MiniBarChart data={BAR_SETS.liz} color="#c040a0" />
             </div>
 
-            {/* Combined */}
             <div className="stat-card stat-card-c">
               <div className="stat-label">Total Bond XP</div>
               <div className="stat-value">+{totalXP}</div>
@@ -128,7 +133,6 @@ export default function Landing({
             </div>
           </div>
 
-          {/* QUEST PIPELINE TABLE */}
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">Quest Pipeline</div>
@@ -161,7 +165,6 @@ export default function Landing({
             </div>
           </div>
 
-          {/* QUICK NAV CARDS */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 20 }}>
             {onJoe && (
               <button className="enter-card" onClick={onJoe}>
@@ -200,10 +203,7 @@ export default function Landing({
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
         <div className="content-right">
-
-          {/* LEADERBOARD */}
           <div className="panel" style={{ marginBottom: 16 }}>
             <div className="panel-header">
               <div className="panel-title">Leaderboard</div>
@@ -212,7 +212,7 @@ export default function Landing({
             {[
               { name:"Joe", role:"Warrior", done:joeDone, total:joeTotal, xp:joeXP, color:"#6a50d0", A:WarriorAvatar, badge:"badge-w", onClick:onJoe },
               { name:"Liz", role:"Mage",    done:lizDone, total:lizTotal, xp:lizXP, color:"#c040a0", A:MageAvatar,    badge:"badge-m", onClick:onLiz },
-            ].sort((a,b)=>b.xp-a.xp).map((p,i)=>(
+            ].sort((a, b) => b.xp - a.xp).map((p, i) => (
               <div key={p.name} style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 0", borderBottom: i===0?"1px solid var(--border)":"none" }}>
                 <span style={{ fontSize:16, width:20 }}>{i===0?"🥇":"🥈"}</span>
                 <p.A size={34}/>
@@ -228,13 +228,12 @@ export default function Landing({
             ))}
           </div>
 
-          {/* WEEKLY STREAK */}
           <div className="panel" style={{ marginBottom: 16 }}>
             <div className="panel-header">
               <div className="panel-title">Week Streak</div>
             </div>
             <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-              {DAYS_SHORT.map((d,i)=>(
+              {DAYS_SHORT.map((d, i) => (
                 <div key={d} className={`day-pip${i===todayIdx?" today":i<todayIdx?" past":""}`}>{d}</div>
               ))}
             </div>
@@ -243,7 +242,6 @@ export default function Landing({
             </div>
           </div>
 
-          {/* PLATFORM INSIGHT (quest type breakdown) */}
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">Quest Insight</div>
