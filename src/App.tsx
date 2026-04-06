@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { GLOBAL_CSS } from "./styles";
-import { usePlayer, useFeed } from "./hooks";
+import { usePlayer, useFeed, UsePlayerReturn, UseFeedReturn } from "./hooks";
 import { useAuth } from "./useAuth";
 import { JOE_QUESTS, LIZ_QUESTS } from "./data";
 import { WarriorAvatar, MageAvatar } from "./avatars";
@@ -11,39 +11,59 @@ import ITLog        from "./components/ITLog";
 import Login        from "./components/Login";
 import Legend       from "./components/Legend";
 
+// ─── Screen type ───────────────────────────────────────────────────────────────
+type Screen = "landing" | "joe" | "liz" | "shared" | "itlog" | "legend";
+
 // ─── Theme context ─────────────────────────────────────────────────────────────
-export const ThemeCtx = createContext({ dark: false, toggle: () => {} });
-export const useTheme = () => useContext(ThemeCtx);
+interface ThemeCtxValue { dark: boolean; toggle: () => void; }
+export const ThemeCtx = createContext<ThemeCtxValue>({ dark: false, toggle: () => {} });
+export const useTheme = (): ThemeCtxValue => useContext(ThemeCtx);
 
 // ─── Player resolution ─────────────────────────────────────────────────────────
 const JOE_EMAIL = process.env.REACT_APP_JOE_EMAIL;
 const LIZ_EMAIL = process.env.REACT_APP_LIZ_EMAIL;
 
-function resolvePlayer(session) {
+type CurrentPlayer = "joe" | "liz" | null;
+
+function resolvePlayer(session: any): CurrentPlayer {
   if (!session) return null;
-  const email = session.user.email;
+  const email: string = session.user.email;
   if (email === JOE_EMAIL) return "joe";
   if (email === LIZ_EMAIL) return "liz";
   return null;
 }
 
-// ─── Nav items per player ──────────────────────────────────────────────────────
-const NAV_ALL = [
-  { id: "landing", icon: "⚔️", label: "Home"    },
-  { id: "joe",     icon: "🛡",  label: "Joe"     },
-  { id: "liz",     icon: "✨", label: "Liz"     },
-  { id: "shared",  icon: "🔮", label: "Realm"   },
-  { id: "itlog",   icon: "🖥",  label: "IT Log"  },
-  { id: "legend",  icon: "📜", label: "Legend"  },
+// ─── Nav items ─────────────────────────────────────────────────────────────────
+interface NavItem { id: Screen; icon: string; label: string; }
+
+const NAV_ALL: NavItem[] = [
+  { id: "landing", icon: "⚔️", label: "Home"   },
+  { id: "joe",     icon: "🛡",  label: "Joe"    },
+  { id: "liz",     icon: "✨", label: "Liz"    },
+  { id: "shared",  icon: "🔮", label: "Realm"  },
+  { id: "itlog",   icon: "🖥",  label: "IT Log" },
+  { id: "legend",  icon: "📜", label: "Legend" },
 ];
 
-const NAV_FOR = {
+const NAV_FOR: Record<NonNullable<CurrentPlayer>, Screen[]> = {
   joe: ["landing", "joe", "shared", "itlog", "legend"],
   liz: ["landing", "liz", "shared", "legend"],
 };
 
-// ─── Shared layout wrapper ─────────────────────────────────────────────────────
-function Shell({ screen, setScreen: handleSetScreen, dark, toggleTheme, topTitle, topSub, navIds, onSignOut, children }) {
+// ─── Shell ─────────────────────────────────────────────────────────────────────
+interface ShellProps {
+  screen:       Screen;
+  setScreen:    (s: Screen) => void;
+  dark:         boolean;
+  toggleTheme:  () => void;
+  topTitle:     string;
+  topSub:       string;
+  navIds:       Screen[];
+  onSignOut:    () => void;
+  children:     React.ReactNode;
+}
+
+function Shell({ screen, setScreen: handleSetScreen, dark, toggleTheme, topTitle, topSub, navIds, onSignOut, children }: ShellProps) {
   const todayName = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const nav = NAV_ALL.filter(n => navIds.includes(n.id));
 
@@ -101,55 +121,54 @@ function Shell({ screen, setScreen: handleSetScreen, dark, toggleTheme, topTitle
   );
 }
 
-// ───  ROOT ──────────────────────────────────────────────────────────────────────
+// ─── TITLES map ────────────────────────────────────────────────────────────────
+const TITLES: Record<Screen, [string, string]> = {
+  landing: ["Quest Board",  "Your daily command center"],
+  joe:     ["Joe's Board",  "Warrior · Daily Quests"],
+  liz:     ["Liz's Board",  "Mage · Daily Quests"],
+  shared:  ["Shared Realm", "Feed · Stats · Leaderboard"],
+  itlog:   ["IT Daily Log", "Tickets · Notes · Handoff"],
+  legend:  ["XP Legend",    "Quest guide & scoring reference"],
+};
+
+// ─── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const { session, loading, signIn, signOut } = useAuth();
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<boolean>(false);
 
-  const currentPlayer = resolvePlayer(session);
+  const currentPlayer: CurrentPlayer = resolvePlayer(session);
 
-  const [screen, setScreen] = useState("landing");
-  const prevPlayer = useRef(null);
+  const [screen, setScreen] = useState<Screen>("landing");
+  const prevPlayer = useRef<CurrentPlayer>(null);
 
   // Persist screen across reloads; only redirect to board on fresh login
   useEffect(() => {
     if (!currentPlayer) { prevPlayer.current = null; return; }
-    const validScreens = currentPlayer === "joe"
-      ? ["landing", "joe", "shared", "itlog", "legend"]
-      : ["landing", "liz", "shared", "legend"];
+    const validScreens: Screen[] = NAV_FOR[currentPlayer];
     if (prevPlayer.current === null) {
-      const saved = sessionStorage.getItem("quest_screen");
+      const saved = sessionStorage.getItem("quest_screen") as Screen | null;
       setScreen(saved && validScreens.includes(saved) ? saved : currentPlayer);
     }
     prevPlayer.current = currentPlayer;
   }, [currentPlayer]);
 
-  const handleSetScreen = (s) => {
+  const handleSetScreen = (s: Screen): void => {
     setScreen(s);
     sessionStorage.setItem("quest_screen", s);
   };
 
-  const joePlayer = usePlayer(JOE_QUESTS, "Joe");
-  const lizPlayer = usePlayer(LIZ_QUESTS, "Liz");
-  const feed      = useFeed();
+  const joePlayer: UsePlayerReturn = usePlayer(JOE_QUESTS, "Joe");
+  const lizPlayer: UsePlayerReturn = usePlayer(LIZ_QUESTS, "Liz");
+  const feed:      UseFeedReturn   = useFeed();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }, [dark]);
 
-  const toggleTheme = () => setDark(d => !d);
+  const toggleTheme = (): void => setDark(d => !d);
 
-  const TITLES = {
-    landing: ["Quest Board",   "Your daily command center"],
-    joe:     ["Joe's Board",   "Warrior · Daily Quests"],
-    liz:     ["Liz's Board",   "Mage · Daily Quests"],
-    shared:  ["Shared Realm",  "Feed · Stats · Leaderboard"],
-    itlog:   ["IT Daily Log",  "Tickets · Notes · Handoff"],
-    legend:  ["XP Legend",     "Quest guide & scoring reference"],
-  };
-
-  const [topTitle, topSub] = TITLES[screen] || TITLES.landing;
-  const navIds = NAV_FOR[currentPlayer] || [];
+  const [topTitle, topSub] = TITLES[screen] ?? TITLES.landing;
+  const navIds: Screen[] = currentPlayer ? NAV_FOR[currentPlayer] : [];
 
   if (loading) {
     return (

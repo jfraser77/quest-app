@@ -37,7 +37,7 @@ export interface FeedPost {
   player: string;
   prompt: string;
   answer: string;
-  ts: string;
+  created_at: string;
 }
 
 export type TicketStatus = "open" | "in-progress" | "resolved" | "escalated";

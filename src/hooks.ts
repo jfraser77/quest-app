@@ -1,15 +1,14 @@
-
-
 import { useState, useEffect, useCallback, useRef } from "react";
-import {  SECTIONS } from "./data";
+import { SECTIONS } from "./data";
 import { supabase } from "./supabase";
+import type { Quest, FeedPost } from "./types";
 
 // ── Unique ID helper ──────────────────────────────────────────────────────────
-export const newId = () =>
+export const newId = (): string =>
   `q-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 // ── Build a blank quest object ────────────────────────────────────────────────
-export const blankQuest = (sectionId = "morning") => ({
+export const blankQuest = (sectionId = "morning"): Quest => ({
   id:      newId(),
   title:   "",
   desc:    "",
@@ -17,27 +16,18 @@ export const blankQuest = (sectionId = "morning") => ({
   xp:      50,
   type:    "growth",
   boss:    false,
-  section: sectionId,
+  section: sectionId as Quest["section"],
   custom:  true,
 });
 
-// ── Hydrate preset data into quest objects ────────────────────────────────────
-// const hydratePresets = (presetMap) => {
-//   const out = {};
-//   SECTIONS.forEach(({ id }) => { out[id] = []; });
-//   Object.entries(presetMap).forEach(([dayIdx, quests]) => {
-//     quests.forEach((q) => {
-//       const sec = q.section || "personal";
-//       if (!out[sec]) out[sec] = [];
-//       out[sec].push({ ...q, id: newId(), custom: false, day: Number(dayIdx) });
-//     });
-//   });
-//   return out;
-// };
-
 // ── Build default quests from preset ─────────────────────────────────────────
-function buildFromPreset(presetMap, dayIdx) {
-  const out = {};
+type QuestPreset = Omit<Quest, "id">;
+
+function buildFromPreset(
+  presetMap: Record<number, QuestPreset[]>,
+  dayIdx: number
+): Record<string, Quest[]> {
+  const out: Record<string, Quest[]> = {};
   SECTIONS.forEach(({ id }) => { out[id] = []; });
   (presetMap[dayIdx] || []).forEach((q) => {
     const sec = q.section || "personal";
@@ -46,38 +36,59 @@ function buildFromPreset(presetMap, dayIdx) {
   return out;
 }
 
+// ── usePlayer return type ─────────────────────────────────────────────────────
+export interface UsePlayerReturn {
+  quests:       Record<string, Quest[]>;
+  done:         Record<string, boolean>;
+  intention:    string;
+  note:         string;
+  setIntention: (v: string) => void;
+  setNote:      (v: string) => void;
+  addQuest:     (sectionId: string) => void;
+  updateQuest:  (sectionId: string, id: string, field: keyof Quest, value: Quest[keyof Quest]) => void;
+  removeQuest:  (sectionId: string, id: string) => void;
+  toggleDone:   (id: string) => void;
+  loadDay:      (dayIdx: number) => void;
+  resetDay:     () => void;
+  totalXP:      number;
+  earnedXP:     number;
+  totalCount:   number;
+  doneCount:    number;
+  pct:          number;
+}
+
 // ── usePlayer hook ────────────────────────────────────────────────────────────
-// Manages one player's quests, done state, intention, and closing note.
-export function usePlayer(presetMap, playerName = "unknown") {
+export function usePlayer(
+  presetMap: Record<number, QuestPreset[]>,
+  playerName = "unknown"
+): UsePlayerReturn {
   const todayIdx  = new Date().getDay();
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  // localStorage keys (fast offline cache)
   const questsKey    = `quests_${playerName}_${todayDate}`;
   const intentionKey = `intention_${playerName}_${todayDate}`;
   const noteKey      = `note_${playerName}_${todayDate}`;
   const doneKey      = `done_${playerName}_${todayDate}`;
 
-  // ── State — seed from localStorage so the UI is instant on load ─────────────
-  const [quests, setQuests] = useState(() => {
+  const [quests, setQuests] = useState<Record<string, Quest[]>>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(questsKey));
+      const saved = JSON.parse(localStorage.getItem(questsKey) ?? "null");
       if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
     } catch {}
     return buildFromPreset(presetMap, todayIdx);
   });
 
-  const [intention, setIntention] = useState(() => {
+  const [intention, setIntention] = useState<string>(() => {
     try { return localStorage.getItem(intentionKey) || ""; } catch { return ""; }
   });
 
-  const [note, setNote] = useState(() => {
+  const [note, setNote] = useState<string>(() => {
     try { return localStorage.getItem(noteKey) || ""; } catch { return ""; }
   });
 
-  const [done, setDone] = useState({});
+  const [done, setDone] = useState<Record<string, boolean>>({});
   const supabaseLoaded = useRef(false);
-  const saveTimer = useRef(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Supabase load on mount ──────────────────────────────────────────────────
   useEffect(() => {
@@ -92,7 +103,8 @@ export function usePlayer(presetMap, playerName = "unknown") {
         if (error) console.error("[QuestApp] load error:", error);
         supabaseLoaded.current = true;
         if (!data) return;
-        const srcQuests = (data.quests && !Array.isArray(data.quests)) ? data.quests : null;
+        const srcQuests: Record<string, Quest[]> | null =
+          (data.quests && !Array.isArray(data.quests)) ? data.quests : null;
         if (srcQuests) {
           setQuests(srcQuests);
           try { localStorage.setItem(questsKey, JSON.stringify(srcQuests)); } catch {}
@@ -107,7 +119,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
         }
         if (Array.isArray(data.done_titles) && data.done_titles.length > 0) {
           const allQ = Object.values(srcQuests || quests).flat();
-          const restored = {};
+          const restored: Record<string, boolean> = {};
           allQ.forEach((q) => { if (data.done_titles.includes(q.title)) restored[q.id] = true; });
           setDone(restored);
           try { localStorage.setItem(doneKey, JSON.stringify(data.done_titles)); } catch {}
@@ -115,7 +127,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Save done immediately to localStorage + Supabase (full row) ────────────
+  // ── Save done immediately to localStorage + Supabase ───────────────────────
   useEffect(() => {
     if (!supabaseLoaded.current) return;
     const allQ = Object.values(quests).flat();
@@ -140,9 +152,9 @@ export function usePlayer(presetMap, playerName = "unknown") {
     if (!supabase || !supabaseLoaded.current) return;
     const allQ = Object.values(quests).flat();
     const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
-    clearTimeout(saveTimer.current);
+    clearTimeout(saveTimer.current ?? undefined);
     saveTimer.current = setTimeout(() => {
-      supabase.from("player_day")
+      supabase!.from("player_day")
         .upsert(
           { player: playerName, date: todayDate, quests, intention, note, done_titles: doneTitles },
           { onConflict: "player,date" }
@@ -155,24 +167,29 @@ export function usePlayer(presetMap, playerName = "unknown") {
   useEffect(() => {
     if (supabaseLoaded.current) return;
     try {
-      const saved = JSON.parse(localStorage.getItem(doneKey) || "[]");
+      const saved: string[] = JSON.parse(localStorage.getItem(doneKey) || "[]");
       if (!Array.isArray(saved) || saved.length === 0) return;
       const allQ = Object.values(quests).flat();
-      const restored = {};
+      const restored: Record<string, boolean> = {};
       allQ.forEach((q) => { if (saved.includes(q.title)) restored[q.id] = true; });
       if (Object.keys(restored).length > 0) setDone(restored);
     } catch {}
   }, [doneKey, quests]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Quest CRUD ─────────────────────────────────────────────────────────────
-  const addQuest = useCallback((sectionId) => {
+  const addQuest = useCallback((sectionId: string): void => {
     setQuests((p) => ({
       ...p,
       [sectionId]: [...(p[sectionId] || []), blankQuest(sectionId)],
     }));
   }, []);
 
-  const updateQuest = useCallback((sectionId, id, field, value) => {
+  const updateQuest = useCallback((
+    sectionId: string,
+    id: string,
+    field: keyof Quest,
+    value: Quest[keyof Quest]
+  ): void => {
     setQuests((p) => ({
       ...p,
       [sectionId]: p[sectionId].map((q) =>
@@ -181,7 +198,7 @@ export function usePlayer(presetMap, playerName = "unknown") {
     }));
   }, []);
 
-  const removeQuest = useCallback((sectionId, id) => {
+  const removeQuest = useCallback((sectionId: string, id: string): void => {
     setQuests((p) => ({
       ...p,
       [sectionId]: p[sectionId].filter((q) => q.id !== id),
@@ -189,17 +206,17 @@ export function usePlayer(presetMap, playerName = "unknown") {
     setDone((p) => { const n = { ...p }; delete n[id]; return n; });
   }, []);
 
-  const toggleDone = useCallback((id) => {
+  const toggleDone = useCallback((id: string): void => {
     setDone((prev) => {
       const nowDone = !prev[id];
       if (nowDone) {
         const quest = Object.values(quests).flat().find((q) => q.id === id);
         if (quest) {
           supabase?.from("quest_logs").insert({
-            player:     playerName,
-            quest_id:   id,
-            xp_earned:  quest.xp || 0,
-            date:       new Date().toISOString().slice(0, 10),
+            player:    playerName,
+            quest_id:  id,
+            xp_earned: quest.xp || 0,
+            date:      new Date().toISOString().slice(0, 10),
           });
         }
       }
@@ -207,13 +224,12 @@ export function usePlayer(presetMap, playerName = "unknown") {
     });
   }, [quests, playerName]);
 
-  // ── Load a specific day's presets ───────────────────────────────────────────
-  const loadDay = useCallback((dayIdx) => {
+  const loadDay = useCallback((dayIdx: number): void => {
     setQuests(buildFromPreset(presetMap, dayIdx));
     setDone({});
   }, [presetMap]);
 
-  const resetDay = useCallback(() => {
+  const resetDay = useCallback((): void => {
     try { localStorage.removeItem(doneKey); } catch {}
     setDone({});
   }, [doneKey]);
@@ -236,10 +252,17 @@ export function usePlayer(presetMap, playerName = "unknown") {
   };
 }
 
+// ── useFeed return type ───────────────────────────────────────────────────────
+export interface UseFeedReturn {
+  posts:       FeedPost[];
+  feedLoading: boolean;
+  addPost:     (player: string, prompt: string, answer: string) => Promise<boolean>;
+}
+
 // ── useFeed hook ──────────────────────────────────────────────────────────────
-export function useFeed() {
-  const [posts, setPosts] = useState([]);
-  const [feedLoading, setFeedLoading] = useState(true);
+export function useFeed(): UseFeedReturn {
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [feedLoading, setFeedLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!supabase) { setFeedLoading(false); return; }
@@ -250,14 +273,18 @@ export function useFeed() {
       .limit(50)
       .then(({ data, error }) => {
         if (error) console.error("[QuestApp] feed load error:", error);
-        if (data) setPosts(data);
+        if (data) setPosts(data as FeedPost[]);
         setFeedLoading(false);
       });
   }, []);
 
-  const addPost = useCallback(async (player, prompt, answer) => {
+  const addPost = useCallback(async (
+    player: string,
+    prompt: string,
+    answer: string
+  ): Promise<boolean> => {
     if (!answer.trim() || !prompt) return false;
-    const newPost = {
+    const newPost: FeedPost = {
       id: newId(),
       player,
       prompt,
