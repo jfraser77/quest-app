@@ -65,7 +65,7 @@ export function usePlayer(
   const todayIdx  = new Date().getDay();
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  const questsKey    = `quests_${playerName}_${todayDate}`;
+  const questsKey    = `quests_${playerName}`;                  // date-agnostic: board persists until user changes it
   const intentionKey = `intention_${playerName}_${todayDate}`;
   const noteKey      = `note_${playerName}_${todayDate}`;
   const doneKey      = `done_${playerName}_${todayDate}`;
