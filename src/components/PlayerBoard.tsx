@@ -20,10 +20,9 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
   const [mode,     setMode]     = useState<string>("play");
   const [questTab, setQuestTab] = useState<string>("today");
   const [flash,    setFlash]    = useState<string | null>(null);
-  const [selDay,   setSelDay]   = useState<number>(todayIdx);
 
   const {
-    quests, done, intention, note, setIntention, setNote,
+    quests, done, intention, note, selectedDay, setIntention, setNote,
     addQuest, updateQuest, removeQuest,
     toggleDone, loadDay, resetDay,
     totalXP, earnedXP, totalCount, doneCount, pct,
@@ -36,7 +35,7 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
     setTimeout(() => setFlash(null), 600);
   };
 
-  const handleLoadDay = (i: number) => { setSelDay(i); loadDay(i); };
+  const handleLoadDay = (i: number) => { loadDay(i); };
 
   const allFlat = Object.values(quests).flat().filter(q => q.title.trim());
 
@@ -106,7 +105,7 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
                 <div className="section-label" style={{ marginBottom:10 }}>LOAD DAY PRESET</div>
                 <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                   {DAYS_SHORT.map((d, i) => (
-                    <button key={d} className={`day-pip${selDay===i?" today":""}`}
+                    <button key={d} className={`day-pip${selectedDay===i?" today":""}`}
                       onClick={()=>handleLoadDay(i)}>{d}</button>
                   ))}
                 </div>

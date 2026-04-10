@@ -42,6 +42,7 @@ export interface UsePlayerReturn {
   done:         Record<string, boolean>;
   intention:    string;
   note:         string;
+  selectedDay:  number;
   setIntention: (v: string) => void;
   setNote:      (v: string) => void;
   addQuest:     (sectionId: string) => void;
@@ -65,15 +66,21 @@ export function usePlayer(
   const todayIdx  = new Date().getDay();
   const todayDate = new Date().toISOString().slice(0, 10);
 
-  const questsKey    = `quests_${playerName}`;                  // date-agnostic: board persists until user changes it
+  // quests are stored per-day so switching days never discards edits
+  const [selectedDay, setSelectedDay] = useState<number>(todayIdx);
+  const questsKey    = `quests_${playerName}_${selectedDay}`;
   const intentionKey = `intention_${playerName}_${todayDate}`;
   const noteKey      = `note_${playerName}_${todayDate}`;
   const doneKey      = `done_${playerName}_${todayDate}`;
 
   const [quests, setQuests] = useState<Record<string, Quest[]>>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(questsKey) ?? "null");
+      // Try day-specific key first
+      const saved = JSON.parse(localStorage.getItem(`quests_${playerName}_${todayIdx}`) ?? "null");
       if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
+      // Migration: fall back to old date-agnostic key
+      const legacy = JSON.parse(localStorage.getItem(`quests_${playerName}`) ?? "null");
+      if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) return legacy;
     } catch {}
     return buildFromPreset(presetMap, todayIdx);
   });
@@ -149,7 +156,9 @@ export function usePlayer(
       localStorage.setItem(intentionKey, intention);
       localStorage.setItem(noteKey, note);
     } catch {}
-    if (!supabase || !supabaseLoaded.current) return;
+    // Only sync today's data to Supabase — never overwrite today's remote row
+    // with a different day's quests that the user is just browsing.
+    if (!supabase || !supabaseLoaded.current || selectedDay !== todayIdx) return;
     const allQ = Object.values(quests).flat();
     const doneTitles = allQ.filter((q) => done[q.id]).map((q) => q.title);
     clearTimeout(saveTimer.current ?? undefined);
@@ -225,9 +234,18 @@ export function usePlayer(
   }, [quests, playerName]);
 
   const loadDay = useCallback((dayIdx: number): void => {
-    setQuests(buildFromPreset(presetMap, dayIdx));
+    let saved: Record<string, Quest[]> | null = null;
+    try {
+      const raw = localStorage.getItem(`quests_${playerName}_${dayIdx}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) saved = parsed;
+      }
+    } catch {}
+    setQuests(saved ?? buildFromPreset(presetMap, dayIdx));
     setDone({});
-  }, [presetMap]);
+    setSelectedDay(dayIdx);
+  }, [presetMap, playerName]);
 
   const resetDay = useCallback((): void => {
     try { localStorage.removeItem(doneKey); } catch {}
@@ -244,7 +262,7 @@ export function usePlayer(
   const pct          = totalXP > 0 ? Math.round((earnedXP / totalXP) * 100) : 0;
 
   return {
-    quests, done, intention, note,
+    quests, done, intention, note, selectedDay,
     setIntention, setNote,
     addQuest, updateQuest, removeQuest, toggleDone,
     loadDay, resetDay,
