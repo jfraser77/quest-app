@@ -46,8 +46,8 @@ const NAV_ALL: NavItem[] = [
 ];
 
 const NAV_FOR: Record<NonNullable<CurrentPlayer>, Screen[]> = {
-  joe: ["landing", "joe", "shared", "itlog", "legend"],
-  liz: ["landing", "liz", "shared", "legend"],
+  joe: ["landing", "joe", "liz", "shared", "itlog", "legend"],
+  liz: ["landing", "joe", "liz", "shared", "legend"],
 };
 
 // ─── Shell ─────────────────────────────────────────────────────────────────────
@@ -214,22 +214,24 @@ export default function App() {
           />
         )}
 
-        {screen === "joe" && currentPlayer === "joe" && (
+        {screen === "joe" && (
           <PlayerBoard
             player="Joe" color="#6a50d0"
             avatar={WarriorAvatar}
             playerHook={joePlayer}
+            readOnly={currentPlayer !== "joe"}
             onBack={() => handleSetScreen("landing")}
             onShared={() => handleSetScreen("shared")}
-            onITLog={() => handleSetScreen("itlog")}
+            onITLog={currentPlayer === "joe" ? () => handleSetScreen("itlog") : undefined}
           />
         )}
 
-        {screen === "liz" && currentPlayer === "liz" && (
+        {screen === "liz" && (
           <PlayerBoard
             player="Liz" color="#c040a0"
             avatar={MageAvatar}
             playerHook={lizPlayer}
+            readOnly={currentPlayer !== "liz"}
             onBack={() => handleSetScreen("landing")}
             onShared={() => handleSetScreen("shared")}
           />

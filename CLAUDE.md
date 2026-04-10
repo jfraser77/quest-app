@@ -73,3 +73,9 @@ REACT_APP_LIZ_EMAIL
 ## Quest Data Structure
 
 Each quest has: `id`, `title`, `desc`, `xp`, `type`, `section`, optionally `boss: true`. Quests are organized by section (`morning`, `work`, `learning`, `personal`, `closing`). `JOE_QUESTS` and `LIZ_QUESTS` in `data.js` are arrays indexed by day of week (0–6).
+
+## Compact Preservation Rules
+When compacting, always preserve:
+- File paths I've modified
+- Current test failures
+- Active debugging hypotheses

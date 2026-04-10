@@ -10,12 +10,13 @@ interface PlayerBoardProps {
   color:      string;
   avatar:     React.ComponentType<{ size?: number }>;
   playerHook: UsePlayerReturn;
+  readOnly?:  boolean;
   onBack:     () => void;
   onShared:   () => void;
   onITLog?:   () => void;
 }
 
-export default function PlayerBoard({ player, color, avatar: Avatar, playerHook, onBack, onShared, onITLog }: PlayerBoardProps) {
+export default function PlayerBoard({ player, color, avatar: Avatar, playerHook, readOnly = false, onBack, onShared, onITLog }: PlayerBoardProps) {
   const [mode,     setMode]     = useState<string>("play");
   const [questTab, setQuestTab] = useState<string>("today");
   const [flash,    setFlash]    = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
   } = playerHook;
 
   const handleToggle = (id: string) => {
+    if (readOnly) return;
     toggleDone(id);
     setFlash(id);
     setTimeout(() => setFlash(null), 600);
@@ -80,14 +82,22 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
             </div>
           </div>
 
+          {readOnly && (
+            <div style={{ marginBottom:14, padding:"8px 12px", borderRadius:8, background:"var(--surface2)", border:"1px solid var(--border)", fontSize:12, color:"var(--text2)" }}>
+              👁 Viewing {player}'s board · read-only
+            </div>
+          )}
+
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
             <div className="tabs" style={{ flex:1 }}>
               <button className={`tab-btn${questTab==="today"?" active":""}`} onClick={()=>setQuestTab("today")}>Today</button>
               <button className={`tab-btn${questTab==="all"?" active":""}`}   onClick={()=>setQuestTab("all")}>All Days</button>
             </div>
-            <button className={`btn btn-sm${mode==="play"?" btn-primary":""}`} onClick={()=>setMode("play")}>▶ Play</button>
-            <button className={`btn btn-sm${mode==="edit"?" btn-primary":""}`} onClick={()=>setMode("edit")}>✏ Edit</button>
-            <button className="btn btn-sm" onClick={resetDay} style={{ color:"var(--text3)" }}>↺</button>
+            {!readOnly && <>
+              <button className={`btn btn-sm${mode==="play"?" btn-primary":""}`} onClick={()=>setMode("play")}>▶ Play</button>
+              <button className={`btn btn-sm${mode==="edit"?" btn-primary":""}`} onClick={()=>setMode("edit")}>✏ Edit</button>
+              <button className="btn btn-sm" onClick={resetDay} style={{ color:"var(--text3)" }}>↺</button>
+            </>}
           </div>
 
           {mode==="edit" && (
