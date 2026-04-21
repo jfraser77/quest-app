@@ -211,6 +211,7 @@ export default function App() {
             onLiz={currentPlayer === "liz" ? () => handleSetScreen("liz") : null}
             onShared={() => handleSetScreen("shared")}
             onITLog={currentPlayer === "joe" ? () => handleSetScreen("itlog") : null}
+            feedHook={feed}
           />
         )}
 

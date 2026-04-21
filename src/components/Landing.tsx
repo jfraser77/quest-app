@@ -1,6 +1,8 @@
 import React from "react";
 import { WarriorAvatar, MageAvatar } from "../avatars";
 import { DAYS_SHORT } from "../data";
+import type { FeedPost } from "../types";
+import type { UseFeedReturn } from "../hooks";
 
 const todayIdx = new Date().getDay();
 
@@ -72,6 +74,41 @@ const PIPELINE: PipelineRow[] = [
 
 const PIPE_COLS = ["Today", "Active", "Done", "Boss", "Streak"];
 
+const JOE_COLOR = "#6a50d0";
+const LIZ_COLOR = "#c040a0";
+
+function MiniFeedCard({ post, onShared }: { post: FeedPost; onShared: () => void }) {
+  const isJoe  = post.player === "Joe";
+  const color  = isJoe ? JOE_COLOR : LIZ_COLOR;
+  const Avatar = isJoe ? WarriorAvatar : MageAvatar;
+  const date   = new Date(post.created_at);
+  const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div
+      onClick={onShared}
+      style={{
+        display: "flex", gap: 10, padding: "10px 0",
+        borderBottom: "1px solid var(--border)", cursor: "pointer",
+      }}
+    >
+      <Avatar size={28} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color }}>{post.player}</span>
+          <span style={{ fontSize: 10, color: "var(--text3)", marginLeft: "auto" }}>{timeStr}</span>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text3)", fontStyle: "italic", marginBottom: 2, lineHeight: 1.4 }}>
+          "{post.prompt}"
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+          {post.answer}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface LandingProps {
   joeXP:         number;
   lizXP:         number;
@@ -84,12 +121,15 @@ interface LandingProps {
   onLiz:         (() => void) | null;
   onShared:      () => void;
   onITLog:       (() => void) | null;
+  feedHook:      UseFeedReturn;
 }
 
 export default function Landing({
   joeXP, lizXP, joeDone, lizDone, joeTotal, lizTotal,
-  currentPlayer, onJoe, onLiz, onShared, onITLog,
+  currentPlayer, onJoe, onLiz, onShared, onITLog, feedHook,
 }: LandingProps) {
+  const { posts, feedLoading } = feedHook;
+  const recentPosts = posts.slice(0, 3);
   const totalXP   = joeXP + lizXP;
   const totalDone = joeDone + lizDone;
   const totalQ    = joeTotal + lizTotal;
@@ -242,7 +282,7 @@ export default function Landing({
             </div>
           </div>
 
-          <div className="panel">
+          <div className="panel" style={{ marginBottom: 16 }}>
             <div className="panel-header">
               <div className="panel-title">Quest Insight</div>
               <button className="panel-more">···</button>
@@ -252,6 +292,45 @@ export default function Landing({
             <InsightRow icon="❤️" name="Relationship"  pct={22} color="#c040a0"/>
             <InsightRow icon="💪" name="Body"          pct={12} color="#40a080"/>
             <InsightRow icon="🏠" name="Home / Self"   pct={6}  color="#d09040"/>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header" style={{ marginBottom: 8 }}>
+              <div className="panel-title">Realm Feed</div>
+              <button
+                className="panel-more"
+                onClick={onShared}
+                style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600 }}
+              >
+                See all →
+              </button>
+            </div>
+            {feedLoading && (
+              <div style={{ fontSize: 12, color: "var(--text3)", padding: "12px 0", textAlign: "center" }}>
+                Loading…
+              </div>
+            )}
+            {!feedLoading && recentPosts.length === 0 && (
+              <div style={{ fontSize: 12, color: "var(--text3)", padding: "12px 0", textAlign: "center" }}>
+                No posts yet 🔮
+              </div>
+            )}
+            {recentPosts.map(p => (
+              <MiniFeedCard key={p.id} post={p} onShared={onShared} />
+            ))}
+            {recentPosts.length > 0 && (
+              <button
+                onClick={onShared}
+                style={{
+                  marginTop: 10, width: "100%", padding: "7px 0",
+                  background: "var(--surface2)", border: "1px solid var(--border)",
+                  borderRadius: 8, fontSize: 12, color: "var(--text2)",
+                  cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                Open Shared Realm →
+              </button>
+            )}
           </div>
         </div>
 
