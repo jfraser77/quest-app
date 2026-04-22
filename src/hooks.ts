@@ -95,6 +95,7 @@ export function usePlayer(
 
   const [done, setDone] = useState<Record<string, boolean>>({});
   const supabaseLoaded = useRef(false);
+  const [supabaseLoadedState, setSupabaseLoadedState] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Supabase load on mount ──────────────────────────────────────────────────
@@ -109,6 +110,7 @@ export function usePlayer(
       .then(({ data, error }) => {
         if (error) console.error("[QuestApp] load error:", error);
         supabaseLoaded.current = true;
+        setSupabaseLoadedState(true);
         if (!data) return;
         const srcQuests: Record<string, Quest[]> | null =
           (data.quests && !Array.isArray(data.quests)) ? data.quests : null;
@@ -147,7 +149,7 @@ export function usePlayer(
         { onConflict: "player,date" }
       )
       .then(({ error }) => { if (error) console.error("[QuestApp] done save error:", error); });
-  }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [done, supabaseLoadedState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Debounce-save quests/intention/note to localStorage + Supabase ──────────
   useEffect(() => {
