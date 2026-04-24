@@ -60,7 +60,7 @@ export default function PlayerBoard({ player, color, avatar: Avatar, playerHook,
                 <span className={`badge-tag ${badgeCls}`}>{roleLabel}</span>
               </div>
               <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>
-                {DAYS_SHORT[todayIdx]} · {doneCount}/{totalCount} quests done
+                {DAYS_SHORT[selectedDay]} · {doneCount}/{totalCount} quests done
               </div>
 
               <div style={{ marginTop:12 }}>
